@@ -29,6 +29,17 @@ def board_with_move(board: list[int], index: int, player: int) -> list[int]:
     return next_board
 
 
+def stone_counts(board: list[int]) -> tuple[int, int]:
+    black_count = sum(1 for cell in board if cell == BLACK)
+    white_count = sum(1 for cell in board if cell == WHITE)
+    return black_count, white_count
+
+
+def move_number(board: list[int]) -> int:
+    black_count, white_count = stone_counts(board)
+    return black_count + white_count
+
+
 def contiguous_count(board: list[int], index: int, player: int, dr: int, dc: int) -> int:
     total = 1
     row, col = idx_to_rc(index)
@@ -56,6 +67,14 @@ def has_five_or_more(board: list[int], index: int, player: int) -> bool:
 
 def is_overline(board: list[int], index: int, player: int) -> bool:
     return any(contiguous_count(board, index, player, dr, dc) >= 6 for dr, dc in DIRECTIONS)
+
+
+def player_has_five(board: list[int], player: int) -> bool:
+    return any(cell == player and has_five_or_more(board, index, player) for index, cell in enumerate(board))
+
+
+def player_has_overline(board: list[int], player: int) -> bool:
+    return any(cell == player and is_overline(board, index, player) for index, cell in enumerate(board))
 
 
 def line_points_through(index: int, dr: int, dc: int) -> list[int]:
@@ -115,8 +134,7 @@ def count_open_three_directions(board: list[int], move: int, player: int) -> int
 
 
 def infer_player(board: list[int]) -> int:
-    black_count = sum(1 for cell in board if cell == BLACK)
-    white_count = sum(1 for cell in board if cell == WHITE)
+    black_count, white_count = stone_counts(board)
     if black_count == white_count:
         return BLACK
     if black_count == white_count + 1:
@@ -131,8 +149,7 @@ def is_forbidden_for_black(board: list[int], index: int) -> bool:
     if board[index] != EMPTY:
         return True
 
-    black_count = sum(1 for cell in board if cell == BLACK)
-    white_count = sum(1 for cell in board if cell == WHITE)
+    black_count, white_count = stone_counts(board)
     move_number = black_count + white_count
 
     if move_number == 0:
@@ -160,3 +177,21 @@ def legal_move_mask(board: list[int]) -> list[bool]:
         else:
             mask.append(True)
     return mask
+
+
+def winner_after_move(board: list[int], index: int, player: int) -> int | None:
+    if player == BLACK and is_overline(board, index, BLACK):
+        return WHITE
+    if has_five_or_more(board, index, player):
+        return player
+    return None
+
+
+def board_winner(board: list[int]) -> int | None:
+    if player_has_overline(board, BLACK):
+        return WHITE
+    if player_has_five(board, BLACK):
+        return BLACK
+    if player_has_five(board, WHITE):
+        return WHITE
+    return None

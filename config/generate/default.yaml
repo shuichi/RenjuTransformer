@@ -1,0 +1,21 @@
+games: 100
+output_path: synthetic-data.csv
+seed: ${seed}
+candidate_limit: 16
+
+augmentation:
+  enabled: true
+  move_ratio: 0.10
+  add_stones_per_color: 1
+  copies_per_sample: 1
+
+high_quality:
+  enabled: false
+  games: ${generate.games}
+  simulations: 16
+  random_interval: 0
+
+parallel:
+  enabled: false
+  workers: 4
+  keep_shards: false
