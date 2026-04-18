@@ -40,7 +40,7 @@ class RenjuTransformerModel(nn.Module):
 
     def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
         batch_size, seq_len = input_ids.shape
-        if seq_len > self.max_seq_len:
+        if not torch.onnx.is_in_onnx_export() and seq_len > self.max_seq_len:
             raise ValueError(f"Input length {seq_len} exceeds configured max_seq_len {self.max_seq_len}.")
 
         positions = torch.arange(seq_len, device=input_ids.device).unsqueeze(0).expand(batch_size, seq_len)

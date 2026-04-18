@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Renju Transformer ONNX Demo</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f0e8;
+        --panel: #fffaf2;
+        --ink: #1f1c18;
+        --muted: #6d6459;
+        --line: #d4c5b4;
+        --accent: #1d6b52;
+        --accent-2: #c0612f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Hiragino Sans", sans-serif;
+        background:
+          radial-gradient(circle at top left, #f8e8cc 0, transparent 32%),
+          linear-gradient(180deg, #f3ecdf 0%, var(--bg) 100%);
+        color: var(--ink);
+      }
+
+      main {
+        width: min(920px, calc(100vw - 32px));
+        margin: 32px auto;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: color-mix(in srgb, var(--panel) 92%, white);
+        box-shadow: 0 16px 40px rgba(66, 45, 18, 0.08);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 2rem;
+      }
+
+      p,
+      label,
+      input,
+      textarea,
+      button,
+      pre {
+        font: inherit;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        color: var(--ink);
+      }
+
+      textarea {
+        min-height: 160px;
+        resize: vertical;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .play-area {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+        gap: 20px;
+        align-items: start;
+      }
+
+      .board-shell {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: linear-gradient(180deg, #f0d39f 0%, #ddb977 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(15, minmax(18px, 1fr));
+        gap: 2px;
+        aspect-ratio: 1;
+      }
+
+      .cell {
+        position: relative;
+        border: 0;
+        border-radius: 4px;
+        background: rgba(138, 86, 24, 0.18);
+        min-width: 0;
+        min-height: 0;
+        padding: 0;
+      }
+
+      .cell::before,
+      .cell::after {
+        content: "";
+        position: absolute;
+        background: rgba(84, 52, 19, 0.45);
+      }
+
+      .cell::before {
+        left: 50%;
+        top: 0;
+        width: 1px;
+        height: 100%;
+        transform: translateX(-50%);
+      }
+
+      .cell::after {
+        left: 0;
+        top: 50%;
+        width: 100%;
+        height: 1px;
+        transform: translateY(-50%);
+      }
+
+      .stone {
+        position: absolute;
+        inset: 14%;
+        border-radius: 50%;
+        box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.2);
+        z-index: 1;
+      }
+
+      .stone.black {
+        background: radial-gradient(circle at 30% 30%, #535353 0%, #171717 60%, #000 100%);
+      }
+
+      .stone.white {
+        background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f2eadb 56%, #d8ccb8 100%);
+      }
+
+      .cell.legal {
+        outline: 1px solid rgba(29, 107, 82, 0.35);
+      }
+
+      .cell.last-move {
+        box-shadow: inset 0 0 0 2px rgba(192, 97, 47, 0.85);
+      }
+
+      .panel {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 250, 242, 0.92);
+      }
+
+      .stats {
+        display: grid;
+        gap: 10px;
+      }
+
+      .stat {
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .moves {
+        max-height: 220px;
+        overflow: auto;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: #fff;
+        white-space: pre-wrap;
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        cursor: pointer;
+        color: white;
+        background: var(--accent);
+      }
+
+      button.secondary {
+        background: var(--accent-2);
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .status {
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: #f7efe4;
+        border: 1px solid var(--line);
+      }
+
+      pre {
+        margin: 0;
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px solid #25362d;
+        background: #13201a;
+        color: #eef7f0;
+        overflow: auto;
+      }
+
+      code {
+        font-family: Consolas, monospace;
+      }
+
+      @media (max-width: 820px) {
+        .play-area {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="grid">
+      <header>
+        <h1>Renju Transformer ONNX Demo</h1>
+        <p class="muted">
+          同じディレクトリにある <code>renju_transformer.onnx</code> と metadata JSON を読み込み、
+          ブラウザ上で次の一手を推論します。
+        </p>
+      </header>
+
+      <section class="play-area">
+        <div class="board-shell">
+          <div class="board" id="board"></div>
+        </div>
+        <div class="panel grid">
+          <div class="stats">
+            <div class="stat" id="turn-status">手番: 黒(あなた)</div>
+            <div class="stat" id="game-status">状態: 開始前</div>
+            <div class="stat" id="ai-status">AI: まだ着手していません</div>
+          </div>
+          <div class="actions">
+            <button id="new-game" type="button">新しい対局</button>
+            <button id="ai-move" type="button" class="secondary">AI に着手させる</button>
+          </div>
+          <div>
+            <label for="move-log">棋譜ログ</label>
+            <div class="moves" id="move-log">まだ手がありません。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid two">
+        <div class="field">
+          <label for="model-url">モデル URL</label>
+          <input id="model-url" value="./renju_transformer.onnx" />
+        </div>
+        <div class="field">
+          <label for="metadata-url">metadata URL</label>
+          <input id="metadata-url" value="./renju_transformer.onnx.metadata.json" />
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="field">
+          <label for="board-csv">盤面 CSV</label>
+          <textarea
+            id="board-csv"
+            spellcheck="false"
+            placeholder="225 個の 0/1/2 をカンマ区切りで入力してください。0=空, 1=黒, 2=白"
+          ></textarea>
+        </div>
+        <div class="actions">
+          <button id="fill-empty" type="button" class="secondary">空盤面を入れる</button>
+          <button id="load-model" type="button">モデルを読み込む</button>
+          <button id="run-predict" type="button">推論する</button>
+        </div>
+      </section>
+
+      <section class="grid two">
+        <div class="status" id="status">モデル未ロード</div>
+        <div class="status" id="board-info">盤面セル数: 未入力</div>
+      </section>
+
+      <section class="grid">
+        <label for="result">推論結果</label>
+        <pre id="result">まだ推論していません。</pre>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.min.js"></script>
+    <script type="module">
+      import {
+        BLACK,
+        WHITE,
+        boardIsFull,
+        boardWinner,
+        legalMoveMask,
+        loadModel,
+        parseBoardCsv,
+        predictBoard,
+        setOrtRuntime,
+      } from "./renju_onnx.js";
+
+      const ORT_VERSION = "1.23.2";
+      setOrtRuntime(globalThis.ort);
+      ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VERSION}/dist/`;
+
+      const modelUrlInput = document.querySelector("#model-url");
+      const metadataUrlInput = document.querySelector("#metadata-url");
+      const boardCsvInput = document.querySelector("#board-csv");
+      const boardNode = document.querySelector("#board");
+      const loadButton = document.querySelector("#load-model");
+      const predictButton = document.querySelector("#run-predict");
+      const fillEmptyButton = document.querySelector("#fill-empty");
+      const newGameButton = document.querySelector("#new-game");
+      const aiMoveButton = document.querySelector("#ai-move");
+      const statusNode = document.querySelector("#status");
+      const boardInfoNode = document.querySelector("#board-info");
+      const turnStatusNode = document.querySelector("#turn-status");
+      const gameStatusNode = document.querySelector("#game-status");
+      const aiStatusNode = document.querySelector("#ai-status");
+      const moveLogNode = document.querySelector("#move-log");
+      const resultNode = document.querySelector("#result");
+
+      let loaded = null;
+      const gameState = {
+        board: new Array(225).fill(0),
+        busy: false,
+        over: false,
+        lastMoveIndex: null,
+        moveLog: [],
+      };
+
+      function indexToCoord(index, boardSize = 15) {
+        const row = Math.floor(index / boardSize) + 1;
+        const col = (index % boardSize) + 1;
+        return `(${row}, ${col})`;
+      }
+
+      function setStatus(message) {
+        statusNode.textContent = message;
+      }
+
+      function setResult(value) {
+        resultNode.textContent = value;
+      }
+
+      function updateBoardInfo() {
+        const raw = boardCsvInput.value.trim();
+        if (!raw) {
+          boardInfoNode.textContent = "盤面セル数: 未入力";
+          return;
+        }
+        try {
+          const board = parseBoardCsv(raw);
+          boardInfoNode.textContent = `盤面セル数: ${board.length}`;
+        } catch (error) {
+          boardInfoNode.textContent = `盤面セル数: 解析失敗 (${error.message})`;
+        }
+      }
+
+      function syncGameFromTextarea() {
+        try {
+          const board = parseBoardCsv(boardCsvInput.value.trim());
+          if (board.length !== 225 || gameState.busy) {
+            return;
+          }
+          legalMoveMask(board, loaded?.metadata);
+          gameState.board = board;
+          gameState.over = false;
+          gameState.lastMoveIndex = null;
+          gameState.moveLog = [];
+          aiStatusNode.textContent = "AI: textarea から盤面を反映";
+          refreshGameSummary("盤面を反映");
+          evaluateBoardAfterMove();
+        } catch {
+          // ignore partial or invalid edits
+        }
+      }
+
+      function syncBoardCsv() {
+        boardCsvInput.value = gameState.board.join(",");
+        updateBoardInfo();
+      }
+
+      function legalMaskForCurrentBoard() {
+        const metadata = loaded?.metadata;
+        try {
+          return legalMoveMask(gameState.board, metadata);
+        } catch {
+          return null;
+        }
+      }
+
+      function renderMoveLog() {
+        if (gameState.moveLog.length === 0) {
+          moveLogNode.textContent = "まだ手がありません。";
+          return;
+        }
+        moveLogNode.textContent = gameState.moveLog.join("\n");
+      }
+
+      function renderBoard() {
+        const legalMask = !gameState.over && !gameState.busy ? legalMaskForCurrentBoard() : null;
+        boardNode.replaceChildren();
+        for (let index = 0; index < gameState.board.length; index += 1) {
+          const cellValue = gameState.board[index];
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "cell";
+          button.dataset.index = String(index);
+          button.title = indexToCoord(index);
+          if (legalMask?.[index]) {
+            button.classList.add("legal");
+          }
+          if (gameState.lastMoveIndex === index) {
+            button.classList.add("last-move");
+          }
+          if (cellValue !== 0) {
+            const stone = document.createElement("span");
+            stone.className = `stone ${cellValue === BLACK ? "black" : "white"}`;
+            stone.ariaHidden = "true";
+            button.append(stone);
+          }
+          button.addEventListener("click", () => handleHumanMove(index));
+          boardNode.append(button);
+        }
+      }
+
+      function currentPlayer() {
+        try {
+          return gameState.board.filter((value) => value === BLACK).length ===
+            gameState.board.filter((value) => value === WHITE).length
+            ? BLACK
+            : WHITE;
+        } catch {
+          return BLACK;
+        }
+      }
+
+      function refreshGameSummary(message = null) {
+        const player = currentPlayer();
+        turnStatusNode.textContent = gameState.over
+          ? "手番: 対局終了"
+          : `手番: ${player === BLACK ? "黒" : "白"}${player === BLACK ? "(あなた)" : "(AI)"}`;
+        if (message) {
+          gameStatusNode.textContent = `状態: ${message}`;
+        }
+        renderMoveLog();
+        syncBoardCsv();
+        renderBoard();
+      }
+
+      function finishGame(message) {
+        gameState.over = true;
+        gameState.busy = false;
+        refreshGameSummary(message);
+      }
+
+      function evaluateBoardAfterMove() {
+        const winner = boardWinner(gameState.board, loaded?.metadata);
+        if (winner === BLACK) {
+          finishGame("黒の勝ち");
+          return true;
+        }
+        if (winner === WHITE) {
+          finishGame("白の勝ち");
+          return true;
+        }
+        if (boardIsFull(gameState.board, loaded?.metadata)) {
+          finishGame("引き分け");
+          return true;
+        }
+        return false;
+      }
+
+      function resetGame() {
+        gameState.board = new Array(225).fill(0);
+        gameState.busy = false;
+        gameState.over = false;
+        gameState.lastMoveIndex = null;
+        gameState.moveLog = [];
+        aiStatusNode.textContent = "AI: まだ着手していません";
+        refreshGameSummary("新しい対局");
+        setResult("まだ推論していません。");
+      }
+
+      async function ensureLoaded() {
+        if (loaded) {
+          return loaded;
+        }
+        setStatus("モデルを読み込み中...");
+        loaded = await loadModel(modelUrlInput.value.trim(), metadataUrlInput.value.trim(), {
+          executionProviders: ["wasm"],
+        });
+        setStatus(
+          `モデル読み込み完了: ${loaded.metadata.board_size}x${loaded.metadata.board_size}, input_length=${loaded.metadata.input_length}`,
+        );
+        return loaded;
+      }
+
+      function createEmptyBoardCsv() {
+        return new Array(225).fill(0).join(",");
+      }
+
+      async function runAiMove() {
+        if (gameState.busy || gameState.over) {
+          return;
+        }
+        if (currentPlayer() !== WHITE) {
+          setStatus("今は AI の手番ではありません。");
+          return;
+        }
+
+        gameState.busy = true;
+        refreshGameSummary("AI が考えています...");
+        try {
+          const {session, metadata} = await ensureLoaded();
+          const prediction = await predictBoard(session, gameState.board, metadata, {
+            topK: 5,
+            applyLegalMask: true,
+          });
+          const aiIndex = prediction.predictedIndex;
+          gameState.board[aiIndex] = WHITE;
+          gameState.lastMoveIndex = aiIndex;
+          gameState.moveLog.push(
+            `${gameState.moveLog.length + 1}. 白 ${indexToCoord(aiIndex)} prob=${prediction.predictedProbability.toFixed(4)}`,
+          );
+          aiStatusNode.textContent =
+            `AI: ${indexToCoord(aiIndex)} に着手 ` +
+            `(top1=${prediction.predictedMoveId}, prob=${prediction.predictedProbability.toFixed(4)})`;
+          setResult(JSON.stringify(prediction, null, 2));
+          if (!evaluateBoardAfterMove()) {
+            gameState.busy = false;
+            refreshGameSummary("あなたの手番");
+          }
+        } catch (error) {
+          gameState.busy = false;
+          refreshGameSummary("AI 着手失敗");
+          aiStatusNode.textContent = `AI: 失敗 (${error.message})`;
+          setResult(error.stack ?? String(error));
+          setStatus(`AI 着手失敗: ${error.message}`);
+        }
+      }
+
+      async function handleHumanMove(index) {
+        if (gameState.busy || gameState.over) {
+          return;
+        }
+        if (currentPlayer() !== BLACK) {
+          setStatus("今はあなたの手番ではありません。");
+          return;
+        }
+        const legalMask = legalMaskForCurrentBoard();
+        if (!legalMask?.[index]) {
+          setStatus(`そこには打てません: ${indexToCoord(index)}`);
+          return;
+        }
+        gameState.board[index] = BLACK;
+        gameState.lastMoveIndex = index;
+        gameState.moveLog.push(`${gameState.moveLog.length + 1}. 黒 ${indexToCoord(index)}`);
+        aiStatusNode.textContent = "AI: あなたの着手後に応答します";
+        refreshGameSummary("AI の手番");
+        if (evaluateBoardAfterMove()) {
+          return;
+        }
+        await runAiMove();
+      }
+
+      loadButton.addEventListener("click", async () => {
+        loadButton.disabled = true;
+        predictButton.disabled = true;
+        try {
+          loaded = null;
+          await ensureLoaded();
+        } catch (error) {
+          setStatus(`読み込み失敗: ${error.message}`);
+        } finally {
+          loadButton.disabled = false;
+          predictButton.disabled = false;
+        }
+      });
+
+      predictButton.addEventListener("click", async () => {
+        loadButton.disabled = true;
+        predictButton.disabled = true;
+        try {
+          const {session, metadata} = await ensureLoaded();
+          const board = parseBoardCsv(boardCsvInput.value.trim());
+          const prediction = await predictBoard(session, board, metadata, {
+            topK: 5,
+            applyLegalMask: true,
+          });
+          setResult(JSON.stringify(prediction, null, 2));
+          setStatus(`推論完了: predicted_move_id=${prediction.predictedMoveId}`);
+        } catch (error) {
+          setResult(error.stack ?? String(error));
+          setStatus(`推論失敗: ${error.message}`);
+        } finally {
+          loadButton.disabled = false;
+          predictButton.disabled = false;
+        }
+      });
+
+      fillEmptyButton.addEventListener("click", () => {
+        resetGame();
+      });
+
+      newGameButton.addEventListener("click", resetGame);
+      aiMoveButton.addEventListener("click", runAiMove);
+
+      boardCsvInput.addEventListener("input", () => {
+        updateBoardInfo();
+        syncGameFromTextarea();
+      });
+      boardCsvInput.value = createEmptyBoardCsv();
+      updateBoardInfo();
+      resetGame();
+    </script>
+  </body>
+</html>

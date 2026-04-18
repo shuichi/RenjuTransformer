@@ -45,7 +45,7 @@ uv run python .\renju-transformer.py mode=generate generate.high_quality.enabled
 Windows / macOS の両方で大量生成したい場合は、Python 側の shard 並列化を使えます。各 worker が別 CSV を生成し、最後に自動で 1 つに結合します。
 
 ```powershell
-uv run python .\renju-transformer.py mode=generate generate.games=100000 generate.output_path=synthetic-data.csv generate.parallel.enabled=true generate.parallel.workers=8
+uv run python .\renju-transformer.py mode=generate generate.games=3200 generate.output_path=data.csv generate.parallel.enabled=true generate.parallel.workers=32
 ```
 
 中間 shard を残したい場合は `generate.parallel.keep_shards=true` を指定します。

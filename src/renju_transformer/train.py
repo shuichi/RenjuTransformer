@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -11,6 +12,7 @@ import torch
 from omegaconf import DictConfig, OmegaConf
 from torch import nn
 from torch.utils.data import DataLoader, random_split
+from tqdm import tqdm
 
 from .dataset import RenjuDataset
 from .evaluate import evaluate_model
@@ -121,8 +123,15 @@ def train_model(cfg: DictConfig) -> None:
             total_loss = 0.0
             total_correct = 0
             total_samples = 0
+            train_progress = tqdm(
+                train_loader,
+                desc=f"Epoch {epoch}/{cfg.train.max_epochs} [train]",
+                leave=True,
+                dynamic_ncols=True,
+                file=sys.stdout,
+            )
 
-            for step, (input_ids, labels) in enumerate(train_loader, start=1):
+            for step, (input_ids, labels) in enumerate(train_progress, start=1):
                 input_ids = input_ids.to(device)
                 labels = labels.to(device)
 
@@ -143,30 +152,35 @@ def train_model(cfg: DictConfig) -> None:
                 total_correct += (logits.argmax(dim=-1) == labels).sum().item()
                 total_samples += batch_size
                 global_step += 1
+                train_progress.set_postfix(
+                    loss=f"{total_loss / total_samples:.4f}",
+                    acc=f"{total_correct / total_samples:.4f}",
+                    lr=f"{optimizer.param_groups[0]['lr']:.2e}",
+                )
 
                 if step % cfg.train.log_every_steps == 0:
                     mlflow.log_metric("train_step_loss", loss.item(), step=global_step)
 
+            train_progress.close()
             train_metrics = {
                 "loss": total_loss / total_samples,
                 "accuracy": total_correct / total_samples,
             }
-            val_metrics = evaluate_model(model, val_loader, criterion, device)
+            val_metrics = evaluate_model(
+                model,
+                val_loader,
+                criterion,
+                device,
+                desc=f"Epoch {epoch}/{cfg.train.max_epochs} [val]",
+            )
 
             mlflow.log_metric("train_loss", train_metrics["loss"], step=epoch)
             mlflow.log_metric("train_accuracy", train_metrics["accuracy"], step=epoch)
             mlflow.log_metric("val_loss", val_metrics["loss"], step=epoch)
             mlflow.log_metric("val_accuracy", val_metrics["accuracy"], step=epoch)
 
-            print(
-                f"epoch={epoch} "
-                f"train_loss={train_metrics['loss']:.4f} "
-                f"train_acc={train_metrics['accuracy']:.4f} "
-                f"val_loss={val_metrics['loss']:.4f} "
-                f"val_acc={val_metrics['accuracy']:.4f}"
-            )
-
-            if val_metrics["loss"] < best_val_loss:
+            is_best = val_metrics["loss"] < best_val_loss
+            if is_best:
                 best_val_loss = val_metrics["loss"]
                 best_model_state = {key: value.detach().cpu() for key, value in model.state_dict().items()}
                 checkpoint = {
@@ -177,6 +191,22 @@ def train_model(cfg: DictConfig) -> None:
                 }
                 torch.save(checkpoint, best_checkpoint_path)
                 mlflow.log_metric("best_val_loss", best_val_loss, step=epoch)
+
+            print(
+                f"epoch={epoch} "
+                f"train_loss={train_metrics['loss']:.4f} "
+                f"train_acc={train_metrics['accuracy']:.4f} "
+                f"val_loss={val_metrics['loss']:.4f} "
+                f"val_acc={val_metrics['accuracy']:.4f} "
+                f"best_val_loss={best_val_loss:.4f}",
+                flush=True,
+            )
+
+            if is_best:
+                print(
+                    f"best_checkpoint_updated={best_checkpoint_path.resolve()} val_loss={best_val_loss:.4f}",
+                    flush=True,
+                )
 
         if best_model_state is None:
             raise RuntimeError("Training completed without producing a checkpoint.")
@@ -189,4 +219,4 @@ def train_model(cfg: DictConfig) -> None:
             best_model.eval()
             mlflow.pytorch.log_model(best_model, name="model")
 
-    print(f"best_checkpoint={best_checkpoint_path.resolve()}")
+    print(f"best_checkpoint={best_checkpoint_path.resolve()}", flush=True)
