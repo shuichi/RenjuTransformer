@@ -4,7 +4,7 @@ r"""Export a trained RenjuTransformer checkpoint to ONNX plus browser metadata.
 Usage:
     uv run python .\scripts\export_onnx.py ^
         --checkpoint artifacts/checkpoints/best_model.pt ^
-        --output web/renju_transformer.onnx
+        --output docs/renju_transformer.onnx
 """
 
 from __future__ import annotations
