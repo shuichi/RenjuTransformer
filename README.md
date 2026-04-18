@@ -1,1 +1,1 @@
-# GomokuTransformer
+# RenjuTransformer
