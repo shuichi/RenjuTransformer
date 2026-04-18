@@ -201,6 +201,13 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Project artifacts
+artifacts/
+mlruns/
+outputs/
+mlflow.db
+mlflow.db-*
+
 # Marimo
 marimo/_static/
 marimo/_lsp/

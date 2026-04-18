@@ -1,0 +1,5 @@
+checkpoint_path: null
+board_csv: ""
+board_path: null
+top_k: 5
+apply_legal_mask: true
