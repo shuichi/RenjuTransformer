@@ -15,7 +15,6 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from renju_transformer.predict import predict_from_checkpoint
-from renju_transformer.generate import generate_data
 from renju_transformer.train import train_model
 
 
@@ -27,9 +26,6 @@ def main(cfg: DictConfig) -> None:
         return
     if cfg.mode == "predict":
         predict_from_checkpoint(cfg)
-        return
-    if cfg.mode == "generate":
-        generate_data(cfg)
         return
     raise ValueError(f"Unsupported mode: {cfg.mode}")
 

@@ -10,7 +10,7 @@ uv sync
 
 ## 学習
 
-`data.csv` は `mode=generate` が出力した 1 行 227 列の CSV を想定します。
+`data.csv` は `mcts.cpp` が出力した 1 行 227 列の CSV を想定します。
 
 ```powershell
 uv run python .\renju-transformer.py
@@ -24,31 +24,44 @@ uv run python .\renju-transformer.py data.path=sample-log.csv train.max_epochs=5
 
 ## 合成データ生成
 
-軽量自己対戦ベースの生成パイプラインを `generate` モードで実行できます。出力形式は学習用 CSV と同じで、各行は `board(225) + SEP(228) + move_id` です。
+`mcts.cpp` は、Renju のルールと禁じ手を考慮した自己対戦データ生成器です。各手について、`board(225) + SEP(228) + move_id` の 1 行 CSV を標準出力に書き出します。試合進捗と勝敗結果は標準エラー出力に書き出します。
+
+### ビルド
 
 ```powershell
-uv run python .\renju-transformer.py mode=generate generate.games=100 generate.output_path=synthetic-data.csv
+g++ -std=c++17 -O2 -pthread .\mcts.cpp -o .\mcts.exe
 ```
 
-デフォルトでは、基礎データ生成に加えて次の Data Augmentation を 1 回ずつ適用します。
-
-- `generate.augmentation.move_ratio=0.10`
-- `generate.augmentation.add_stones_per_color=1`
-- `generate.augmentation.copies_per_sample=1`
-
-高精度データ追加はデフォルトで off です。必要な場合のみ MCTS 生成を追加できます。
+### Usage
 
 ```powershell
-uv run python .\renju-transformer.py mode=generate generate.high_quality.enabled=true generate.high_quality.games=20
+.\mcts.exe 100000 --simulations 1000 --parallel 28 > data.csv 2> error.log
 ```
 
-Windows / macOS の両方で大量生成したい場合は、Python 側の shard 並列化を使えます。各 worker が別 CSV を生成し、最後に自動で 1 つに結合します。
+この例では次を行います。
+
+- `100000` 試合の自己対戦を実行
+- 1 手あたり `1000` 回の MCTS シミュレーションを実行
+- `28` スレッドで試合単位に並列化
+- 学習用 CSV を `output.csv` に保存
+- 進捗と勝敗ログを `error.log` に保存
+
+主な引数は次です。
+
+- `<games>`: 総試合数
+- `--simulations <N>`: 1 手あたりの MCTS シミュレーション回数
+- `--parallel <N>`: 並列スレッド数
+- `--seed <N>`: 乱数 seed
+- `--candidate-limit <N>`: 探索対象に残す候補手の上限
+- `--rollout-limit <N>`: rollout の最大手数
+- `--exploration <C>`: UCT の探索定数
+- `--trace-plies`: 標準エラー出力に各手の進捗も出す
+
+ヘルプは次で表示できます。
 
 ```powershell
-uv run python .\renju-transformer.py mode=generate generate.games=3200 generate.output_path=data.csv generate.parallel.enabled=true generate.parallel.workers=32
+.\mcts.exe --help
 ```
-
-中間 shard を残したい場合は `generate.parallel.keep_shards=true` を指定します。
 
 ## 推論
 

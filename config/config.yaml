@@ -1,6 +1,5 @@
 defaults:
   - data: default
-  - generate: default
   - model: transformer
   - train: default
   - optimizer: adamw
