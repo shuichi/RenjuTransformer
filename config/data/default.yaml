@@ -1,4 +1,4 @@
-path: data.csv
+path: data.csv.gz
 board_size: 15
 sep_token_id: 228
 move_id_offset: 3
