@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Renju Transformer ONNX Demo</title>
+    <title>Renju Transformer ONNX デモ</title>
     <style>
       :root {
         color-scheme: light;
@@ -42,6 +42,22 @@
       h1 {
         margin: 0 0 8px;
         font-size: 2rem;
+      }
+
+      .page-header {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+
+      .page-header-copy {
+        display: grid;
+        gap: 8px;
+      }
+
+      .page-header-copy p {
+        margin: 0;
       }
 
       p,
@@ -260,6 +276,28 @@
         background: var(--accent-2);
       }
 
+      button.language-toggle {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        min-width: 136px;
+        padding: 9px 12px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        white-space: nowrap;
+      }
+
+      .language-current {
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .language-next {
+        color: var(--muted);
+      }
+
       button:disabled {
         opacity: 0.6;
         cursor: not-allowed;
@@ -291,21 +329,41 @@
           grid-template-columns: 1fr;
         }
       }
+
+      @media (max-width: 640px) {
+        .page-header {
+          flex-direction: column;
+        }
+      }
     </style>
   </head>
   <body>
     <main class="grid">
-      <header>
-        <h1>Renju Transformer ONNX Demo</h1>
-        <p class="muted">
-          同じディレクトリにある <code>renju_transformer.onnx</code> と metadata JSON を読み込み、
-          ブラウザ上で次の一手を推論します。
-        </p>
+      <header class="page-header">
+        <div class="page-header-copy">
+          <h1 data-i18n="title">Renju Transformer ONNX デモ</h1>
+          <p class="muted" data-i18n-html="introHtml">
+            同じディレクトリにある <code>renju_transformer.onnx</code> と metadata JSON を読み込み、
+            ブラウザ上で次の一手を推論します。
+          </p>
+        </div>
+        <button
+          id="language-toggle"
+          type="button"
+          class="language-toggle"
+          aria-label="Englishへ切り替え"
+        >
+          <span id="language-current" class="language-current">日本語</span>
+          <span aria-hidden="true">/</span>
+          <span id="language-next" class="language-next">English</span>
+        </button>
       </header>
 
       <section class="play-area">
         <div class="board-shell">
-          <div class="opening-tip" id="opening-tip" hidden>初手なので中央においてね</div>
+          <div class="opening-tip" id="opening-tip" data-i18n="openingTip" hidden>
+            初手なので中央においてね
+          </div>
           <div class="board" id="board"></div>
         </div>
         <div class="panel grid">
@@ -315,11 +373,13 @@
             <div class="stat" id="ai-status">AI: まだ着手していません</div>
           </div>
           <div class="actions">
-            <button id="new-game" type="button">新しい対局</button>
-            <button id="ai-move" type="button" class="secondary">AI に着手させる</button>
+            <button id="new-game" type="button" data-i18n="newGameButton">新しい対局</button>
+            <button id="ai-move" type="button" class="secondary" data-i18n="aiMoveButton">
+              AI に着手させる
+            </button>
           </div>
           <div>
-            <label for="move-log">棋譜ログ</label>
+            <label for="move-log" data-i18n="moveLogLabel">棋譜ログ</label>
             <div class="moves" id="move-log">まだ手がありません。</div>
           </div>
         </div>
@@ -327,28 +387,31 @@
 
       <section class="grid two">
         <div class="field">
-          <label for="model-url">モデル URL</label>
+          <label for="model-url" data-i18n="modelUrlLabel">モデル URL</label>
           <input id="model-url" value="./renju_transformer.onnx" />
         </div>
         <div class="field">
-          <label for="metadata-url">metadata URL</label>
+          <label for="metadata-url" data-i18n="metadataUrlLabel">metadata URL</label>
           <input id="metadata-url" value="./renju_transformer.onnx.metadata.json" />
         </div>
       </section>
 
       <section class="grid">
         <div class="field">
-          <label for="board-csv">盤面 CSV</label>
+          <label for="board-csv" data-i18n="boardCsvLabel">盤面 CSV</label>
           <textarea
             id="board-csv"
             spellcheck="false"
+            data-i18n-placeholder="boardCsvPlaceholder"
             placeholder="225 個の 0/1/2 をカンマ区切りで入力してください。0=空, 1=黒, 2=白"
           ></textarea>
         </div>
         <div class="actions">
-          <button id="fill-empty" type="button" class="secondary">空盤面を入れる</button>
-          <button id="load-model" type="button">モデルを読み込む</button>
-          <button id="run-predict" type="button">推論する</button>
+          <button id="fill-empty" type="button" class="secondary" data-i18n="fillEmptyButton">
+            空盤面を入れる
+          </button>
+          <button id="load-model" type="button" data-i18n="loadModelButton">モデルを読み込む</button>
+          <button id="run-predict" type="button" data-i18n="runPredictButton">推論する</button>
         </div>
       </section>
 
@@ -358,7 +421,7 @@
       </section>
 
       <section class="grid">
-        <label for="result">推論結果</label>
+        <label for="result" data-i18n="resultLabel">推論結果</label>
         <pre id="result">まだ推論していません。</pre>
       </section>
     </main>
@@ -398,15 +461,180 @@
       const aiStatusNode = document.querySelector("#ai-status");
       const moveLogNode = document.querySelector("#move-log");
       const resultNode = document.querySelector("#result");
+      const languageToggleButton = document.querySelector("#language-toggle");
+      const languageCurrentNode = document.querySelector("#language-current");
+      const languageNextNode = document.querySelector("#language-next");
+
+      const LANGUAGE_STORAGE_KEY = "renju-transformer.docs.language";
+      const LANGUAGES = ["ja", "en"];
+      const I18N = {
+        ja: {
+          ai: "AI",
+          aiAfterHumanMove: "AI: あなたの着手後に応答します",
+          aiFailed: ({message}) => `AI: 失敗 (${message})`,
+          aiIdle: "AI: まだ着手していません",
+          aiMoveButton: "AI に着手させる",
+          aiMoveFailed: "AI 着手失敗",
+          aiMoved: ({coord, moveId, probability}) =>
+            `AI: ${coord} に着手 (top1=${moveId}, prob=${probability})`,
+          aiSyncedFromTextarea: "AI: textarea から盤面を反映",
+          aiThinking: "AI が考えています...",
+          aiTurn: "AI の手番",
+          black: "黒",
+          blackWins: "黒の勝ち",
+          boardApplied: "盤面を反映",
+          boardCsvLabel: "盤面 CSV",
+          boardCsvPlaceholder: "225 個の 0/1/2 をカンマ区切りで入力してください。0=空, 1=黒, 2=白",
+          boardInfoCount: ({count}) => `盤面セル数: ${count}`,
+          boardInfoEmpty: "盤面セル数: 未入力",
+          boardInfoParseFailed: ({message}) => `盤面セル数: 解析失敗 (${message})`,
+          cellLabel: ({coord}) => `交点 ${coord}`,
+          draw: "引き分け",
+          fillEmptyButton: "空盤面を入れる",
+          gameStatus: ({message}) => `状態: ${message}`,
+          illegalMove: ({coord}) => `そこには打てません: ${coord}`,
+          inferenceComplete: ({moveId}) => `推論完了: predicted_move_id=${moveId}`,
+          inferenceFailed: ({message}) => `推論失敗: ${message}`,
+          introHtml:
+            '同じディレクトリにある <code>renju_transformer.onnx</code> と metadata JSON を読み込み、ブラウザ上で次の一手を推論します。',
+          languageName: "日本語",
+          languageToggleLabel: ({language}) => `${language}へ切り替え`,
+          loadFailed: ({message}) => `読み込み失敗: ${message}`,
+          loadModelButton: "モデルを読み込む",
+          metadataUrlLabel: "metadata URL",
+          modelLoaded: ({boardSize, inputLength}) =>
+            `モデル読み込み完了: ${boardSize}x${boardSize}, input_length=${inputLength}`,
+          modelLoading: "モデルを読み込み中...",
+          modelUnloaded: "モデル未ロード",
+          modelUrlLabel: "モデル URL",
+          moveLogEmpty: "まだ手がありません。",
+          moveLogEntry: ({moveNumber, playerLabel, coord, probability}) =>
+            probability == null
+              ? `${moveNumber}. ${playerLabel} ${coord}`
+              : `${moveNumber}. ${playerLabel} ${coord} prob=${probability}`,
+          moveLogLabel: "棋譜ログ",
+          newGame: "新しい対局",
+          newGameButton: "新しい対局",
+          notAiTurn: "今は AI の手番ではありません。",
+          notHumanTurn: "今はあなたの手番ではありません。",
+          openingTip: "初手なので中央においてね",
+          resultIdle: "まだ推論していません。",
+          resultLabel: "推論結果",
+          runPredictButton: "推論する",
+          statusAiMoveFailed: ({message}) => `AI 着手失敗: ${message}`,
+          title: "Renju Transformer ONNX デモ",
+          turnCurrent: ({playerLabel, actorLabel}) => `手番: ${playerLabel}(${actorLabel})`,
+          turnGameOver: "手番: 対局終了",
+          white: "白",
+          whiteWins: "白の勝ち",
+          you: "あなた",
+          yourTurn: "あなたの手番",
+        },
+        en: {
+          ai: "AI",
+          aiAfterHumanMove: "AI: will respond after your move",
+          aiFailed: ({message}) => `AI: failed (${message})`,
+          aiIdle: "AI: no move yet",
+          aiMoveButton: "Let AI move",
+          aiMoveFailed: "AI move failed",
+          aiMoved: ({coord, moveId, probability}) =>
+            `AI: moved at ${coord} (top1=${moveId}, prob=${probability})`,
+          aiSyncedFromTextarea: "AI: synced board from textarea",
+          aiThinking: "AI is thinking...",
+          aiTurn: "AI's turn",
+          black: "Black",
+          blackWins: "Black wins",
+          boardApplied: "Board applied",
+          boardCsvLabel: "Board CSV",
+          boardCsvPlaceholder: "Enter 225 comma-separated 0/1/2 values. 0=empty, 1=black, 2=white",
+          boardInfoCount: ({count}) => `Board cells: ${count}`,
+          boardInfoEmpty: "Board cells: not entered",
+          boardInfoParseFailed: ({message}) => `Board cells: parse failed (${message})`,
+          cellLabel: ({coord}) => `Intersection ${coord}`,
+          draw: "Draw",
+          fillEmptyButton: "Fill empty board",
+          gameStatus: ({message}) => `Status: ${message}`,
+          illegalMove: ({coord}) => `Illegal move: ${coord}`,
+          inferenceComplete: ({moveId}) => `Inference complete: predicted_move_id=${moveId}`,
+          inferenceFailed: ({message}) => `Inference failed: ${message}`,
+          introHtml:
+            'Loads <code>renju_transformer.onnx</code> and the metadata JSON from this directory, then predicts the next move in your browser.',
+          languageName: "English",
+          languageToggleLabel: ({language}) => `Switch to ${language}`,
+          loadFailed: ({message}) => `Load failed: ${message}`,
+          loadModelButton: "Load model",
+          metadataUrlLabel: "Metadata URL",
+          modelLoaded: ({boardSize, inputLength}) =>
+            `Model loaded: ${boardSize}x${boardSize}, input_length=${inputLength}`,
+          modelLoading: "Loading model...",
+          modelUnloaded: "Model not loaded",
+          modelUrlLabel: "Model URL",
+          moveLogEmpty: "No moves yet.",
+          moveLogEntry: ({moveNumber, playerLabel, coord, probability}) =>
+            probability == null
+              ? `${moveNumber}. ${playerLabel} ${coord}`
+              : `${moveNumber}. ${playerLabel} ${coord} prob=${probability}`,
+          moveLogLabel: "Move log",
+          newGame: "New game",
+          newGameButton: "New game",
+          notAiTurn: "It is not the AI's turn.",
+          notHumanTurn: "It is not your turn.",
+          openingTip: "First move must be at the center",
+          resultIdle: "No inference yet.",
+          resultLabel: "Inference result",
+          runPredictButton: "Run inference",
+          statusAiMoveFailed: ({message}) => `AI move failed: ${message}`,
+          title: "Renju Transformer ONNX Demo",
+          turnCurrent: ({playerLabel, actorLabel}) => `Turn: ${playerLabel} (${actorLabel})`,
+          turnGameOver: "Turn: game over",
+          white: "White",
+          whiteWins: "White wins",
+          you: "you",
+          yourTurn: "Your turn",
+        },
+      };
+
+      function readLanguagePreference() {
+        try {
+          const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+          if (LANGUAGES.includes(storedLanguage)) {
+            return storedLanguage;
+          }
+        } catch {
+          // Keep the default when storage is unavailable.
+        }
+        return "ja";
+      }
+
+      let currentLanguage = readLanguagePreference();
+      const displayState = {
+        aiStatus: {key: "aiIdle", args: {}},
+        result: {kind: "translated", key: "resultIdle", args: {}},
+        status: {key: "modelUnloaded", args: {}},
+      };
 
       let loaded = null;
       const gameState = {
         board: new Array(225).fill(0),
         busy: false,
+        gameMessage: {key: "newGame", args: {}},
         over: false,
         lastMoveIndex: null,
         moveLog: [],
       };
+
+      function t(key, args = {}) {
+        const value = I18N[currentLanguage][key] ?? I18N.ja[key] ?? key;
+        return typeof value === "function" ? value(args) : value;
+      }
+
+      function writeLanguagePreference(language) {
+        try {
+          localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+        } catch {
+          // Language switching should still work when persistence is blocked.
+        }
+      }
 
       function indexToCoord(index, boardSize = 15) {
         const row = Math.floor(index / boardSize) + 1;
@@ -414,25 +642,93 @@
         return `(${row}, ${col})`;
       }
 
-      function setStatus(message) {
-        statusNode.textContent = message;
+      function playerName(player) {
+        return player === BLACK ? t("black") : t("white");
+      }
+
+      function actorName(player) {
+        return player === BLACK ? t("you") : t("ai");
+      }
+
+      function renderLanguageToggle() {
+        const nextLanguage = currentLanguage === "ja" ? "en" : "ja";
+        languageCurrentNode.textContent = I18N[currentLanguage].languageName;
+        languageNextNode.textContent = I18N[nextLanguage].languageName;
+        languageToggleButton.setAttribute(
+          "aria-label",
+          t("languageToggleLabel", {language: I18N[nextLanguage].languageName}),
+        );
+        languageToggleButton.title = t("languageToggleLabel", {
+          language: I18N[nextLanguage].languageName,
+        });
+      }
+
+      function renderStatus() {
+        statusNode.textContent = t(displayState.status.key, displayState.status.args);
+      }
+
+      function setStatus(key, args = {}) {
+        displayState.status = {key, args};
+        renderStatus();
+      }
+
+      function renderAiStatus() {
+        aiStatusNode.textContent = t(displayState.aiStatus.key, displayState.aiStatus.args);
+      }
+
+      function setAiStatus(key, args = {}) {
+        displayState.aiStatus = {key, args};
+        renderAiStatus();
+      }
+
+      function renderResult() {
+        resultNode.textContent =
+          displayState.result.kind === "translated"
+            ? t(displayState.result.key, displayState.result.args)
+            : displayState.result.value;
       }
 
       function setResult(value) {
-        resultNode.textContent = value;
+        displayState.result = {kind: "raw", value};
+        renderResult();
+      }
+
+      function setTranslatedResult(key, args = {}) {
+        displayState.result = {kind: "translated", key, args};
+        renderResult();
+      }
+
+      function applyLanguage(language) {
+        currentLanguage = language;
+        document.documentElement.lang = language;
+        document.title = t("title");
+        document.querySelectorAll("[data-i18n]").forEach((node) => {
+          node.textContent = t(node.dataset.i18n);
+        });
+        document.querySelectorAll("[data-i18n-html]").forEach((node) => {
+          node.innerHTML = t(node.dataset.i18nHtml);
+        });
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
+          node.placeholder = t(node.dataset.i18nPlaceholder);
+        });
+        renderLanguageToggle();
+        renderStatus();
+        renderAiStatus();
+        renderResult();
+        refreshGameSummary();
       }
 
       function updateBoardInfo() {
         const raw = boardCsvInput.value.trim();
         if (!raw) {
-          boardInfoNode.textContent = "盤面セル数: 未入力";
+          boardInfoNode.textContent = t("boardInfoEmpty");
           return;
         }
         try {
           const board = parseBoardCsv(raw);
-          boardInfoNode.textContent = `盤面セル数: ${board.length}`;
+          boardInfoNode.textContent = t("boardInfoCount", {count: board.length});
         } catch (error) {
-          boardInfoNode.textContent = `盤面セル数: 解析失敗 (${error.message})`;
+          boardInfoNode.textContent = t("boardInfoParseFailed", {message: error.message});
         }
       }
 
@@ -447,8 +743,8 @@
           gameState.over = false;
           gameState.lastMoveIndex = null;
           gameState.moveLog = [];
-          aiStatusNode.textContent = "AI: textarea から盤面を反映";
-          refreshGameSummary("盤面を反映");
+          setAiStatus("aiSyncedFromTextarea");
+          refreshGameSummary("boardApplied");
           evaluateBoardAfterMove();
         } catch {
           // ignore partial or invalid edits
@@ -475,10 +771,22 @@
 
       function renderMoveLog() {
         if (gameState.moveLog.length === 0) {
-          moveLogNode.textContent = "まだ手がありません。";
+          moveLogNode.textContent = t("moveLogEmpty");
           return;
         }
-        moveLogNode.textContent = gameState.moveLog.join("\n");
+        moveLogNode.textContent = gameState.moveLog
+          .map((entry, index) => {
+            if (typeof entry === "string") {
+              return entry;
+            }
+            return t("moveLogEntry", {
+              coord: indexToCoord(entry.index),
+              moveNumber: index + 1,
+              playerLabel: playerName(entry.player),
+              probability: entry.probability,
+            });
+          })
+          .join("\n");
       }
 
       function renderBoard() {
@@ -494,6 +802,7 @@
           button.className = "cell";
           button.dataset.index = String(index);
           button.title = indexToCoord(index);
+          button.setAttribute("aria-label", t("cellLabel", {coord: indexToCoord(index)}));
           if (legalMask?.[index]) {
             button.classList.add("legal");
           }
@@ -525,37 +834,40 @@
         }
       }
 
-      function refreshGameSummary(message = null) {
+      function refreshGameSummary(messageKey = null, args = {}) {
+        if (messageKey) {
+          gameState.gameMessage = {key: messageKey, args};
+        }
         const player = currentPlayer();
         turnStatusNode.textContent = gameState.over
-          ? "手番: 対局終了"
-          : `手番: ${player === BLACK ? "黒" : "白"}${player === BLACK ? "(あなた)" : "(AI)"}`;
-        if (message) {
-          gameStatusNode.textContent = `状態: ${message}`;
-        }
+          ? t("turnGameOver")
+          : t("turnCurrent", {actorLabel: actorName(player), playerLabel: playerName(player)});
+        gameStatusNode.textContent = t("gameStatus", {
+          message: t(gameState.gameMessage.key, gameState.gameMessage.args),
+        });
         renderMoveLog();
         syncBoardCsv();
         renderBoard();
       }
 
-      function finishGame(message) {
+      function finishGame(messageKey) {
         gameState.over = true;
         gameState.busy = false;
-        refreshGameSummary(message);
+        refreshGameSummary(messageKey);
       }
 
       function evaluateBoardAfterMove() {
         const winner = boardWinner(gameState.board, loaded?.metadata);
         if (winner === BLACK) {
-          finishGame("黒の勝ち");
+          finishGame("blackWins");
           return true;
         }
         if (winner === WHITE) {
-          finishGame("白の勝ち");
+          finishGame("whiteWins");
           return true;
         }
         if (boardIsFull(gameState.board, loaded?.metadata)) {
-          finishGame("引き分け");
+          finishGame("draw");
           return true;
         }
         return false;
@@ -567,22 +879,23 @@
         gameState.over = false;
         gameState.lastMoveIndex = null;
         gameState.moveLog = [];
-        aiStatusNode.textContent = "AI: まだ着手していません";
-        refreshGameSummary("新しい対局");
-        setResult("まだ推論していません。");
+        setAiStatus("aiIdle");
+        refreshGameSummary("newGame");
+        setTranslatedResult("resultIdle");
       }
 
       async function ensureLoaded() {
         if (loaded) {
           return loaded;
         }
-        setStatus("モデルを読み込み中...");
+        setStatus("modelLoading");
         loaded = await loadModel(modelUrlInput.value.trim(), metadataUrlInput.value.trim(), {
           executionProviders: ["wasm"],
         });
-        setStatus(
-          `モデル読み込み完了: ${loaded.metadata.board_size}x${loaded.metadata.board_size}, input_length=${loaded.metadata.input_length}`,
-        );
+        setStatus("modelLoaded", {
+          boardSize: loaded.metadata.board_size,
+          inputLength: loaded.metadata.input_length,
+        });
         return loaded;
       }
 
@@ -595,12 +908,12 @@
           return;
         }
         if (currentPlayer() !== WHITE) {
-          setStatus("今は AI の手番ではありません。");
+          setStatus("notAiTurn");
           return;
         }
 
         gameState.busy = true;
-        refreshGameSummary("AI が考えています...");
+        refreshGameSummary("aiThinking");
         try {
           const {session, metadata} = await ensureLoaded();
           const prediction = await predictBoard(session, gameState.board, metadata, {
@@ -610,23 +923,24 @@
           const aiIndex = prediction.predictedIndex;
           gameState.board[aiIndex] = WHITE;
           gameState.lastMoveIndex = aiIndex;
-          gameState.moveLog.push(
-            `${gameState.moveLog.length + 1}. 白 ${indexToCoord(aiIndex)} prob=${prediction.predictedProbability.toFixed(4)}`,
-          );
-          aiStatusNode.textContent =
-            `AI: ${indexToCoord(aiIndex)} に着手 ` +
-            `(top1=${prediction.predictedMoveId}, prob=${prediction.predictedProbability.toFixed(4)})`;
+          const probability = prediction.predictedProbability.toFixed(4);
+          gameState.moveLog.push({index: aiIndex, player: WHITE, probability});
+          setAiStatus("aiMoved", {
+            coord: indexToCoord(aiIndex),
+            moveId: prediction.predictedMoveId,
+            probability,
+          });
           setResult(JSON.stringify(prediction, null, 2));
           if (!evaluateBoardAfterMove()) {
             gameState.busy = false;
-            refreshGameSummary("あなたの手番");
+            refreshGameSummary("yourTurn");
           }
         } catch (error) {
           gameState.busy = false;
-          refreshGameSummary("AI 着手失敗");
-          aiStatusNode.textContent = `AI: 失敗 (${error.message})`;
+          refreshGameSummary("aiMoveFailed");
+          setAiStatus("aiFailed", {message: error.message});
           setResult(error.stack ?? String(error));
-          setStatus(`AI 着手失敗: ${error.message}`);
+          setStatus("statusAiMoveFailed", {message: error.message});
         }
       }
 
@@ -635,19 +949,19 @@
           return;
         }
         if (currentPlayer() !== BLACK) {
-          setStatus("今はあなたの手番ではありません。");
+          setStatus("notHumanTurn");
           return;
         }
         const legalMask = legalMaskForCurrentBoard();
         if (!legalMask?.[index]) {
-          setStatus(`そこには打てません: ${indexToCoord(index)}`);
+          setStatus("illegalMove", {coord: indexToCoord(index)});
           return;
         }
         gameState.board[index] = BLACK;
         gameState.lastMoveIndex = index;
-        gameState.moveLog.push(`${gameState.moveLog.length + 1}. 黒 ${indexToCoord(index)}`);
-        aiStatusNode.textContent = "AI: あなたの着手後に応答します";
-        refreshGameSummary("AI の手番");
+        gameState.moveLog.push({index, player: BLACK});
+        setAiStatus("aiAfterHumanMove");
+        refreshGameSummary("aiTurn");
         if (evaluateBoardAfterMove()) {
           return;
         }
@@ -661,7 +975,7 @@
           loaded = null;
           await ensureLoaded();
         } catch (error) {
-          setStatus(`読み込み失敗: ${error.message}`);
+          setStatus("loadFailed", {message: error.message});
         } finally {
           loadButton.disabled = false;
           predictButton.disabled = false;
@@ -679,10 +993,10 @@
             applyLegalMask: true,
           });
           setResult(JSON.stringify(prediction, null, 2));
-          setStatus(`推論完了: predicted_move_id=${prediction.predictedMoveId}`);
+          setStatus("inferenceComplete", {moveId: prediction.predictedMoveId});
         } catch (error) {
           setResult(error.stack ?? String(error));
-          setStatus(`推論失敗: ${error.message}`);
+          setStatus("inferenceFailed", {message: error.message});
         } finally {
           loadButton.disabled = false;
           predictButton.disabled = false;
@@ -695,14 +1009,19 @@
 
       newGameButton.addEventListener("click", resetGame);
       aiMoveButton.addEventListener("click", runAiMove);
+      languageToggleButton.addEventListener("click", () => {
+        const nextLanguage = currentLanguage === "ja" ? "en" : "ja";
+        writeLanguagePreference(nextLanguage);
+        applyLanguage(nextLanguage);
+      });
 
       boardCsvInput.addEventListener("input", () => {
         updateBoardInfo();
         syncGameFromTextarea();
       });
       boardCsvInput.value = createEmptyBoardCsv();
-      updateBoardInfo();
       resetGame();
+      applyLanguage(currentLanguage);
     </script>
   </body>
 </html>
