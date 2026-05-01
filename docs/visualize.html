@@ -1,0 +1,1915 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RenjuTransformer 推論ビジュアライザ</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f5;
+        --surface: #ffffff;
+        --surface-soft: #eef5f1;
+        --ink: #18201f;
+        --muted: #66726e;
+        --line: #cfd9d4;
+        --board: #d8b36d;
+        --board-line: #7e5a2c;
+        --teal: #177765;
+        --blue: #315fbd;
+        --amber: #c47b20;
+        --rose: #b84455;
+        --violet: #6652b8;
+        --shadow: 0 18px 44px rgba(31, 48, 44, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          "Segoe UI",
+          "Hiragino Sans",
+          "Yu Gothic",
+          sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--ink);
+        cursor: pointer;
+      }
+
+      button:hover {
+        border-color: color-mix(in srgb, var(--teal) 56%, var(--line));
+      }
+
+      button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid color-mix(in srgb, var(--blue) 32%, transparent);
+        outline-offset: 2px;
+      }
+
+      button.primary {
+        border-color: var(--teal);
+        background: var(--teal);
+        color: #fff;
+      }
+
+      button.ghost {
+        background: transparent;
+      }
+
+      .app {
+        width: min(1280px, calc(100vw - 28px));
+        margin: 22px auto 36px;
+        display: grid;
+        gap: 16px;
+      }
+
+      .topbar {
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .title-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        align-items: end;
+        justify-content: space-between;
+        min-width: 0;
+      }
+
+      .title-row > * {
+        min-width: 0;
+      }
+
+      .title-row > :first-child {
+        flex: 1 1 520px;
+      }
+
+      h1 {
+        display: flex;
+        flex-wrap: wrap;
+        column-gap: 0.35em;
+        margin: 0;
+        font-size: 1.65rem;
+        line-height: 1.22;
+        overflow-wrap: anywhere;
+      }
+
+      h1 span {
+        min-width: 0;
+      }
+
+      .subtitle {
+        margin: 6px 0 0;
+        max-width: 68rem;
+        color: var(--muted);
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+      }
+
+      .subtitle span {
+        display: inline;
+      }
+
+      .subtitle span + span::before {
+        content: " ";
+      }
+
+      .badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 5px 9px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface-soft);
+        color: var(--ink);
+        font-size: 0.86rem;
+        white-space: nowrap;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: minmax(250px, max-content) 1fr minmax(210px, 260px);
+        gap: 12px;
+        align-items: center;
+        min-width: 0;
+      }
+
+      .transport,
+      .scenario-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .transport button {
+        min-width: 42px;
+        padding: 0 12px;
+      }
+
+      .scenario-tabs button {
+        min-height: 38px;
+        padding: 0 12px;
+      }
+
+      .scenario-tabs button.active {
+        border-color: var(--blue);
+        background: color-mix(in srgb, var(--blue) 12%, #fff);
+        color: #17356f;
+      }
+
+      .speed-control {
+        display: grid;
+        gap: 6px;
+        min-width: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--teal);
+      }
+
+      .progress {
+        overflow: hidden;
+        height: 8px;
+        border-radius: 999px;
+        background: #e3ebe7;
+      }
+
+      .progress-bar {
+        width: 0%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--teal), var(--blue));
+        transition: width 120ms linear;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(340px, 430px) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .board-panel {
+        display: grid;
+        gap: 14px;
+        padding: 14px;
+      }
+
+      .board-summary {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .metric {
+        min-width: 0;
+        padding: 9px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfb;
+      }
+
+      .metric dt {
+        margin: 0 0 4px;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .metric dd {
+        margin: 0;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .board-shell {
+        position: relative;
+        padding: 12px;
+        border: 1px solid color-mix(in srgb, var(--board-line) 34%, var(--line));
+        border-radius: 8px;
+        background: var(--board);
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(15, minmax(0, 1fr));
+        gap: 1px;
+        aspect-ratio: 1;
+        background: color-mix(in srgb, var(--board-line) 48%, transparent);
+      }
+
+      .cell {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-width: 0;
+        min-height: 0;
+        aspect-ratio: 1;
+        border: 0;
+        border-radius: 0;
+        background:
+          linear-gradient(rgba(23, 119, 101, calc(var(--heat, 0) * 0.52)), rgba(23, 119, 101, calc(var(--heat, 0) * 0.52))),
+          var(--board);
+        color: var(--ink);
+      }
+
+      .cell::before,
+      .cell::after {
+        content: "";
+        position: absolute;
+        z-index: 0;
+        background: rgba(83, 54, 24, 0.5);
+        pointer-events: none;
+      }
+
+      .cell::before {
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 1px;
+      }
+
+      .cell::after {
+        top: 50%;
+        right: 0;
+        left: 0;
+        height: 1px;
+      }
+
+      .cell.token-focus {
+        box-shadow: inset 0 0 0 2px rgba(49, 95, 189, 0.8);
+      }
+
+      .cell.attention {
+        box-shadow:
+          inset 0 0 0 calc(1px + var(--attn, 0) * 5px) rgba(49, 95, 189, 0.62),
+          0 0 0 1px rgba(49, 95, 189, 0.16);
+      }
+
+      .cell.predicted {
+        box-shadow:
+          inset 0 0 0 3px rgba(196, 123, 32, 0.95),
+          0 0 0 2px rgba(196, 123, 32, 0.18);
+      }
+
+      .cell.masked {
+        background:
+          repeating-linear-gradient(45deg, rgba(184, 68, 85, 0.22) 0 3px, transparent 3px 8px),
+          var(--board);
+      }
+
+      .stone {
+        position: absolute;
+        z-index: 2;
+        inset: 16%;
+        border-radius: 50%;
+        box-shadow:
+          inset 0 2px 4px rgba(255, 255, 255, 0.3),
+          0 1px 4px rgba(0, 0, 0, 0.28);
+      }
+
+      .stone.black {
+        background: radial-gradient(circle at 34% 28%, #5a5f5c 0%, #161918 58%, #050606 100%);
+      }
+
+      .stone.white {
+        background: radial-gradient(circle at 34% 28%, #ffffff 0%, #f2eee3 60%, #d9d0bc 100%);
+      }
+
+      .ghost-stone {
+        position: absolute;
+        z-index: 2;
+        inset: 19%;
+        border: 2px dashed rgba(196, 123, 32, 0.98);
+        border-radius: 50%;
+        background: rgba(255, 250, 235, 0.46);
+      }
+
+      .rank-dot {
+        position: absolute;
+        z-index: 3;
+        right: 2px;
+        bottom: 2px;
+        display: grid;
+        place-items: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #fff;
+        color: var(--teal);
+        font-size: 0.68rem;
+        font-weight: 800;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .legend-swatch {
+        width: 14px;
+        height: 14px;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        background: var(--surface-soft);
+      }
+
+      .legend-swatch.heat {
+        background: var(--teal);
+      }
+
+      .legend-swatch.mask {
+        background: repeating-linear-gradient(45deg, rgba(184, 68, 85, 0.32) 0 3px, transparent 3px 7px);
+      }
+
+      .legend-swatch.pick {
+        border-color: var(--amber);
+        background: #fff6df;
+      }
+
+      .token-rail {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        min-height: 58px;
+        padding: 7px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfb;
+      }
+
+      .token-chip {
+        flex: 0 0 auto;
+        min-width: 46px;
+        padding: 6px 7px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        text-align: center;
+      }
+
+      .token-chip strong {
+        display: block;
+        font-size: 0.9rem;
+      }
+
+      .token-chip span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.68rem;
+      }
+
+      .token-chip.black {
+        border-color: #303737;
+        background: #e7ece9;
+      }
+
+      .token-chip.white {
+        border-color: #d6c7a4;
+        background: #fff8e6;
+      }
+
+      .token-chip.sep {
+        border-color: var(--violet);
+        background: color-mix(in srgb, var(--violet) 12%, #fff);
+      }
+
+      .token-chip.focus,
+      .token-chip.moving {
+        border-color: var(--blue);
+        box-shadow: inset 0 0 0 2px rgba(49, 95, 189, 0.16);
+      }
+
+      .token-chip.moving {
+        animation: lift-token 1.1s ease-in-out infinite;
+      }
+
+      @keyframes lift-token {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-5px);
+        }
+      }
+
+      .story-panel {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        min-height: 650px;
+      }
+
+      .steps {
+        margin: 0;
+        padding: 12px;
+        border-right: 1px solid var(--line);
+        list-style: none;
+        background: #fbfcfb;
+      }
+
+      .step-button {
+        width: 100%;
+        min-height: 54px;
+        margin: 0 0 8px;
+        padding: 8px 10px;
+        text-align: left;
+        background: transparent;
+      }
+
+      .step-button.active {
+        border-color: var(--teal);
+        background: color-mix(in srgb, var(--teal) 11%, #fff);
+      }
+
+      .step-button small {
+        display: block;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .stage {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 14px;
+        padding: 16px;
+        min-width: 0;
+      }
+
+      .stage-header {
+        display: grid;
+        gap: 8px;
+      }
+
+      .stage-header h2 {
+        margin: 0;
+        font-size: 1.35rem;
+      }
+
+      .stage-header p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .stage-body {
+        display: grid;
+        gap: 14px;
+        align-content: start;
+      }
+
+      .viz-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+
+      .viz-box {
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .viz-box h3 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+      }
+
+      .viz-box p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .formula {
+        overflow-x: auto;
+        padding: 12px;
+        border: 1px solid color-mix(in srgb, var(--blue) 24%, var(--line));
+        border-radius: 8px;
+        background: #f7faff;
+        color: #183267;
+        font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+        font-size: 0.9rem;
+        line-height: 1.6;
+      }
+
+      .vector-stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .vector-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .vector-bars {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(10px, 1fr));
+        gap: 5px;
+        align-items: end;
+        height: 78px;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfb;
+      }
+
+      .bar {
+        min-height: 4px;
+        height: calc(8px + var(--mag) * 58px);
+        border-radius: 5px 5px 2px 2px;
+        background: var(--blue);
+      }
+
+      .bar.neg {
+        background: var(--rose);
+      }
+
+      .mini-matrix {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 3px;
+      }
+
+      .matrix-cell {
+        aspect-ratio: 1;
+        border-radius: 4px;
+        background: rgba(49, 95, 189, var(--alpha));
+      }
+
+      .attention-list,
+      .logit-list,
+      .choice-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .attention-row,
+      .logit-row,
+      .choice-row {
+        display: grid;
+        grid-template-columns: 76px 1fr 64px;
+        gap: 9px;
+        align-items: center;
+        min-height: 34px;
+      }
+
+      .choice-row {
+        grid-template-columns: 40px 90px 1fr 70px;
+      }
+
+      .track {
+        overflow: hidden;
+        height: 12px;
+        border-radius: 999px;
+        background: #e7eeeb;
+      }
+
+      .fill {
+        width: calc(var(--w) * 100%);
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--teal), var(--amber));
+      }
+
+      .logit-value,
+      .prob-value {
+        color: var(--muted);
+        font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+        font-size: 0.82rem;
+        text-align: right;
+      }
+
+      .layer-stack {
+        display: grid;
+        gap: 8px;
+      }
+
+      .layer {
+        display: grid;
+        grid-template-columns: 76px 1fr;
+        gap: 10px;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfb;
+      }
+
+      .layer.active {
+        border-color: var(--teal);
+        background: color-mix(in srgb, var(--teal) 10%, #fff);
+      }
+
+      .head-row {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 5px;
+      }
+
+      .head {
+        min-height: 18px;
+        border-radius: 5px;
+        background: #dfe8e4;
+      }
+
+      .layer.active .head:nth-child(2n + 1) {
+        background: var(--teal);
+      }
+
+      .layer.active .head:nth-child(2n) {
+        background: var(--blue);
+      }
+
+      .picked-move {
+        display: grid;
+        grid-template-columns: 92px 1fr;
+        gap: 14px;
+        align-items: center;
+        padding: 12px;
+        border: 1px solid color-mix(in srgb, var(--amber) 42%, var(--line));
+        border-radius: 8px;
+        background: #fff8eb;
+      }
+
+      .move-badge {
+        display: grid;
+        place-items: center;
+        min-height: 78px;
+        border-radius: 8px;
+        background: var(--amber);
+        color: #fff;
+        font-size: 1.45rem;
+        font-weight: 800;
+      }
+
+      .picked-move h3 {
+        margin: 0 0 6px;
+      }
+
+      .picked-move p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .note {
+        padding: 10px 12px;
+        border-left: 4px solid var(--teal);
+        background: var(--surface-soft);
+        color: #29413b;
+        line-height: 1.6;
+      }
+
+      .board-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .footer-note {
+        color: var(--muted);
+        font-size: 0.88rem;
+        line-height: 1.55;
+      }
+
+      @media (max-width: 980px) {
+        .toolbar,
+        .layout,
+        .story-panel {
+          grid-template-columns: 1fr;
+        }
+
+        .steps {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .step-button {
+          margin: 0;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .app {
+          width: min(100% - 18px, 1280px);
+          margin-top: 10px;
+        }
+
+        .topbar,
+        .board-panel,
+        .stage {
+          padding: 12px;
+        }
+
+        .title-row {
+          display: grid;
+          justify-content: stretch;
+        }
+
+        .title-row > * {
+          width: 100%;
+        }
+
+        .subtitle,
+        .speed-control,
+        .speed-control input {
+          width: 100%;
+          max-width: calc(100vw - 64px);
+        }
+
+        .subtitle span {
+          display: block;
+        }
+
+        .subtitle span + span::before {
+          content: "";
+        }
+
+        .board-summary {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          display: grid;
+          gap: 2px;
+          font-size: 1.38rem;
+        }
+
+        .attention-row,
+        .logit-row {
+          grid-template-columns: 68px 1fr 56px;
+        }
+
+        .choice-row {
+          grid-template-columns: 34px 72px 1fr 54px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="title-row">
+          <div>
+            <h1><span>RenjuTransformer</span><span>推論ビジュアライザ</span></h1>
+            <p class="subtitle">
+              <span>盤面をトークン列に変え、</span><span>TransformerEncoder が QKV と Attention で</span><span>盤面全体を見て、</span><span>最後に 225 個の次の一手 logits を出す流れを</span><span>順番に見ます。</span>
+            </p>
+          </div>
+          <div class="badges" aria-label="モデル設定">
+            <span class="badge">15x15 board</span>
+            <span class="badge">225 cells + SEP</span>
+            <span class="badge">d_model 128</span>
+            <span class="badge">8 heads x 4 layers</span>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="transport" aria-label="アニメーション操作">
+            <button id="step-back" type="button" title="前のステップ">‹</button>
+            <button id="play-pause" class="primary" type="button" title="再生または一時停止">再生</button>
+            <button id="step-next" type="button" title="次のステップ">›</button>
+            <button id="restart" class="ghost" type="button">最初から</button>
+          </div>
+          <div id="scenario-tabs" class="scenario-tabs" aria-label="サンプル盤面"></div>
+          <label class="speed-control" for="speed">
+            再生速度
+            <input id="speed" type="range" min="0.65" max="1.6" step="0.05" value="1" />
+          </label>
+        </div>
+        <div class="progress" aria-hidden="true"><div id="progress-bar" class="progress-bar"></div></div>
+      </header>
+
+      <main class="layout">
+        <section class="panel board-panel" aria-label="盤面と入力トークン">
+          <dl class="board-summary">
+            <div class="metric">
+              <dt>手番</dt>
+              <dd id="turn-metric">黒</dd>
+            </div>
+            <div class="metric">
+              <dt>入力長</dt>
+              <dd>226 tokens</dd>
+            </div>
+            <div class="metric">
+              <dt>出力</dt>
+              <dd>225 logits</dd>
+            </div>
+          </dl>
+
+          <div class="board-shell">
+            <div id="board" class="board" role="grid" aria-label="15路盤"></div>
+          </div>
+
+          <div class="legend">
+            <span class="legend-item"><span class="legend-swatch heat"></span>確率が高い候補</span>
+            <span class="legend-item"><span class="legend-swatch mask"></span>mask された点</span>
+            <span class="legend-item"><span class="legend-swatch pick"></span>選ばれる一手</span>
+          </div>
+
+          <div id="token-rail" class="token-rail" aria-label="入力トークン列"></div>
+
+          <div class="board-actions">
+            <button id="clear-board" type="button">盤面を空にする</button>
+            <button id="balance-board" type="button">手番を整える</button>
+          </div>
+
+          <p class="footer-note">
+            盤面はクリックで 0=空、1=黒、2=白を切り替えられます。QKV の数値表示は、構造を理解するために 128 次元を 8 本のバーへ圧縮した教育用のミニ計算です。
+          </p>
+        </section>
+
+        <section class="panel story-panel" aria-label="推論ステップ">
+          <ol id="steps" class="steps"></ol>
+          <div class="stage">
+            <div class="stage-header">
+              <h2 id="stage-title"></h2>
+              <p id="stage-copy"></p>
+            </div>
+            <div id="stage-body" class="stage-body"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const BOARD_SIZE = 15;
+      const BOARD_CELLS = BOARD_SIZE * BOARD_SIZE;
+      const SEP_TOKEN_ID = 228;
+      const MOVE_ID_OFFSET = 3;
+      const D_MODEL = 128;
+      const N_HEAD = 8;
+      const NUM_LAYERS = 4;
+      const HEAD_DIM = D_MODEL / N_HEAD;
+      const COLS = "ABCDEFGHIJKLMNO";
+      const EMPTY = 0;
+      const BLACK = 1;
+      const WHITE = 2;
+
+      const STEPS = [
+        {
+          key: "board",
+          label: "盤面",
+          short: "0/1/2 の 225 セル",
+          title: "1. 盤面を数字として読む",
+          copy:
+            "RenjuTransformer では、15x15 の各マスを 0=空、1=黒、2=白の整数として並べます。モデルは画像を見ているのではなく、225 個の数字を読んでいます。",
+        },
+        {
+          key: "tokenize",
+          label: "Tokenizer",
+          short: "225 + SEP",
+          title: "2. トークナイザが入力列を作る",
+          copy:
+            "盤面を左上から右下へ一列にし、最後に SEP token 228 を足します。この 226 番目の場所が、盤面全体を要約して次の一手を考える席になります。",
+        },
+        {
+          key: "embedding",
+          label: "Embedding",
+          short: "token + position",
+          title: "3. 数字をベクトルへ変換する",
+          copy:
+            "各 token は token embedding で意味のベクトルになり、position embedding で場所の情報が足されます。同じ黒石でも、中央と端では別の入力として扱われます。",
+        },
+        {
+          key: "qkv",
+          label: "QKV",
+          short: "Attention の準備",
+          title: "4. Q, K, V を作って注目先を決める",
+          copy:
+            "TransformerEncoder の各 head は、Query が探したい情報、Key が見つけられやすさ、Value が渡す中身を表します。SEP の Query が盤面中の Key と相性計算をして、重要な場所を強く見ます。",
+        },
+        {
+          key: "encoder",
+          label: "Encoder",
+          short: "8 heads x 4 layers",
+          title: "5. Encoder 層で情報を混ぜ直す",
+          copy:
+            "Attention で集めた情報は FeedForward と LayerNorm を通り、4 層ぶん更新されます。近くの石だけでなく、離れた脅威や守りも SEP のベクトルへ集まっていきます。",
+        },
+        {
+          key: "logits",
+          label: "Logits",
+          short: "225 個の点数",
+          title: "6. SEP から次の一手 logits を作る",
+          copy:
+            "最後の SEP 位置だけを取り出し、final_norm と線形 head に通します。出力は 225 個で、それぞれが盤面の1マスに対応する『その手を打ちたい度』です。",
+        },
+        {
+          key: "choice",
+          label: "選択",
+          short: "softmax と argmax",
+          title: "7. 最も確率が高い一手を選ぶ",
+          copy:
+            "logits に合法手 mask をかけ、softmax で確率へ変換します。いちばん大きい確率の index が predictedIndex になり、move_id は index + 3 で復元されます。",
+        },
+      ];
+
+      const SCENARIOS = [
+        {
+          id: "attack",
+          label: "攻めの局面",
+          stones: [
+            [8, 6, BLACK],
+            [8, 7, BLACK],
+            [8, 8, BLACK],
+            [7, 7, BLACK],
+            [9, 9, BLACK],
+            [6, 6, BLACK],
+            [7, 6, WHITE],
+            [9, 6, WHITE],
+            [6, 8, WHITE],
+            [10, 10, WHITE],
+            [8, 10, WHITE],
+            [11, 7, WHITE],
+          ],
+        },
+        {
+          id: "defense",
+          label: "守りの局面",
+          stones: [
+            [8, 6, BLACK],
+            [8, 7, BLACK],
+            [8, 8, BLACK],
+            [8, 9, BLACK],
+            [7, 9, BLACK],
+            [9, 5, BLACK],
+            [6, 6, BLACK],
+            [7, 7, WHITE],
+            [9, 7, WHITE],
+            [6, 8, WHITE],
+            [10, 9, WHITE],
+            [9, 10, WHITE],
+            [11, 8, WHITE],
+          ],
+        },
+        {
+          id: "opening",
+          label: "序盤",
+          stones: [
+            [8, 8, BLACK],
+            [8, 9, WHITE],
+            [7, 8, BLACK],
+            [9, 8, WHITE],
+            [7, 9, BLACK],
+            [9, 7, WHITE],
+          ],
+        },
+      ];
+
+      const state = {
+        step: 0,
+        playing: false,
+        speed: 1,
+        scenario: "attack",
+        board: boardFromScenario(SCENARIOS[0]),
+        stepStartedAt: performance.now(),
+        prediction: null,
+        attention: null,
+      };
+
+      const nodes = {
+        board: document.querySelector("#board"),
+        tokenRail: document.querySelector("#token-rail"),
+        steps: document.querySelector("#steps"),
+        stageTitle: document.querySelector("#stage-title"),
+        stageCopy: document.querySelector("#stage-copy"),
+        stageBody: document.querySelector("#stage-body"),
+        playPause: document.querySelector("#play-pause"),
+        stepBack: document.querySelector("#step-back"),
+        stepNext: document.querySelector("#step-next"),
+        restart: document.querySelector("#restart"),
+        progressBar: document.querySelector("#progress-bar"),
+        speed: document.querySelector("#speed"),
+        scenarioTabs: document.querySelector("#scenario-tabs"),
+        turnMetric: document.querySelector("#turn-metric"),
+        clearBoard: document.querySelector("#clear-board"),
+        balanceBoard: document.querySelector("#balance-board"),
+      };
+
+      function boardFromScenario(scenario) {
+        const board = new Array(BOARD_CELLS).fill(EMPTY);
+        for (const [row, col, stone] of scenario.stones) {
+          board[(row - 1) * BOARD_SIZE + (col - 1)] = stone;
+        }
+        return board;
+      }
+
+      function coord(index) {
+        const row = Math.floor(index / BOARD_SIZE) + 1;
+        const col = index % BOARD_SIZE;
+        return `${COLS[col]}${row}`;
+      }
+
+      function stoneName(value) {
+        if (value === BLACK) return "黒";
+        if (value === WHITE) return "白";
+        return "空";
+      }
+
+      function tokenLabel(value) {
+        if (value === SEP_TOKEN_ID) return "SEP";
+        return String(value);
+      }
+
+      function countStones(board) {
+        let black = 0;
+        let white = 0;
+        for (const cell of board) {
+          if (cell === BLACK) black += 1;
+          if (cell === WHITE) white += 1;
+        }
+        return {black, white};
+      }
+
+      function inferPlayer(board) {
+        const {black, white} = countStones(board);
+        if (black <= white) return BLACK;
+        return WHITE;
+      }
+
+      function opponentOf(player) {
+        return player === BLACK ? WHITE : BLACK;
+      }
+
+      function inside(row, col) {
+        return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
+      }
+
+      function rowColToIndex(row, col) {
+        return row * BOARD_SIZE + col;
+      }
+
+      function indexToRowCol(index) {
+        return [Math.floor(index / BOARD_SIZE), index % BOARD_SIZE];
+      }
+
+      const DIRECTIONS = [
+        [1, 0],
+        [0, 1],
+        [1, 1],
+        [1, -1],
+      ];
+
+      function contiguousCount(board, index, player, dr, dc) {
+        const [row, col] = indexToRowCol(index);
+        let total = 1;
+        for (let step = 1; ; step += 1) {
+          const nr = row + dr * step;
+          const nc = col + dc * step;
+          if (!inside(nr, nc) || board[rowColToIndex(nr, nc)] !== player) break;
+          total += 1;
+        }
+        for (let step = 1; ; step += 1) {
+          const nr = row - dr * step;
+          const nc = col - dc * step;
+          if (!inside(nr, nc) || board[rowColToIndex(nr, nc)] !== player) break;
+          total += 1;
+        }
+        return total;
+      }
+
+      function openEnds(board, index, player, dr, dc) {
+        const [row, col] = indexToRowCol(index);
+        let ends = 0;
+        let step = 1;
+        while (inside(row + dr * step, col + dc * step) && board[rowColToIndex(row + dr * step, col + dc * step)] === player) {
+          step += 1;
+        }
+        if (inside(row + dr * step, col + dc * step) && board[rowColToIndex(row + dr * step, col + dc * step)] === EMPTY) {
+          ends += 1;
+        }
+        step = 1;
+        while (inside(row - dr * step, col - dc * step) && board[rowColToIndex(row - dr * step, col - dc * step)] === player) {
+          step += 1;
+        }
+        if (inside(row - dr * step, col - dc * step) && board[rowColToIndex(row - dr * step, col - dc * step)] === EMPTY) {
+          ends += 1;
+        }
+        return ends;
+      }
+
+      function boardWithMove(board, index, player) {
+        const nextBoard = board.slice();
+        nextBoard[index] = player;
+        return nextBoard;
+      }
+
+      function hasFiveOrMore(board, index, player) {
+        return DIRECTIONS.some(([dr, dc]) => contiguousCount(board, index, player, dr, dc) >= 5);
+      }
+
+      function isOverline(board, index, player) {
+        return DIRECTIONS.some(([dr, dc]) => contiguousCount(board, index, player, dr, dc) >= 6);
+      }
+
+      function linePointsThrough(index, dr, dc) {
+        let [row, col] = indexToRowCol(index);
+        while (inside(row - dr, col - dc)) {
+          row -= dr;
+          col -= dc;
+        }
+        const points = [];
+        while (inside(row, col)) {
+          points.push(rowColToIndex(row, col));
+          row += dr;
+          col += dc;
+        }
+        return points;
+      }
+
+      function immediateWinsInDirection(board, player, linePoints) {
+        const wins = new Set();
+        for (const candidate of linePoints) {
+          if (board[candidate] !== EMPTY) continue;
+          const nextBoard = boardWithMove(board, candidate, player);
+          if (player === BLACK && isOverline(nextBoard, candidate, BLACK)) continue;
+          if (hasFiveOrMore(nextBoard, candidate, player)) {
+            wins.add(candidate);
+          }
+        }
+        return wins;
+      }
+
+      function countFourDirections(board, move, player) {
+        let count = 0;
+        for (const [dr, dc] of DIRECTIONS) {
+          const linePoints = linePointsThrough(move, dr, dc);
+          if (immediateWinsInDirection(board, player, linePoints).size > 0) {
+            count += 1;
+          }
+        }
+        return count;
+      }
+
+      function countOpenThreeDirections(board, move, player) {
+        let count = 0;
+        for (const [dr, dc] of DIRECTIONS) {
+          const linePoints = linePointsThrough(move, dr, dc);
+          for (const candidate of linePoints) {
+            if (board[candidate] !== EMPTY) continue;
+            const nextBoard = boardWithMove(board, candidate, player);
+            if (player === BLACK && isOverline(nextBoard, candidate, BLACK)) continue;
+            const winningPoints = immediateWinsInDirection(nextBoard, player, linePoints);
+            if (winningPoints.size >= 2) {
+              count += 1;
+              break;
+            }
+          }
+        }
+        return count;
+      }
+
+      function isForbiddenForBlack(board, index) {
+        if (board[index] !== EMPTY) return true;
+        const {black, white} = countStones(board);
+        const centerIndex = Math.floor(BOARD_SIZE / 2) * BOARD_SIZE + Math.floor(BOARD_SIZE / 2);
+        if (black === 0 && white === 0) return index !== centerIndex;
+
+        const nextBoard = boardWithMove(board, index, BLACK);
+        if (isOverline(nextBoard, index, BLACK)) return true;
+        if (countFourDirections(nextBoard, index, BLACK) >= 2) return true;
+        if (countOpenThreeDirections(nextBoard, index, BLACK) >= 2) return true;
+        return false;
+      }
+
+      function legalMoveMask(board, player) {
+        return board.map((cell, index) => {
+          if (cell !== EMPTY) return false;
+          return player === BLACK ? !isForbiddenForBlack(board, index) : true;
+        });
+      }
+
+      function localDensity(board, index) {
+        const [row, col] = indexToRowCol(index);
+        let density = 0;
+        for (let dr = -2; dr <= 2; dr += 1) {
+          for (let dc = -2; dc <= 2; dc += 1) {
+            if (dr === 0 && dc === 0) continue;
+            const nr = row + dr;
+            const nc = col + dc;
+            if (!inside(nr, nc)) continue;
+            const cell = board[rowColToIndex(nr, nc)];
+            if (cell !== EMPTY) {
+              const distance = Math.max(Math.abs(dr), Math.abs(dc));
+              density += distance === 1 ? 1.0 : 0.38;
+            }
+          }
+        }
+        return density;
+      }
+
+      function deterministicNoise(index) {
+        return Math.sin(index * 12.9898 + 78.233) * 0.08;
+      }
+
+      function candidateScore(board, index, player) {
+        if (board[index] !== EMPTY) return Number.NEGATIVE_INFINITY;
+        const opponent = opponentOf(player);
+        const nextBoard = board.slice();
+        nextBoard[index] = player;
+        const [row, col] = indexToRowCol(index);
+        const center = (BOARD_SIZE - 1) / 2;
+        const centerBonus = 1.1 - Math.hypot(row - center, col - center) / 10;
+        let score = -2.4 + centerBonus + localDensity(board, index) * 0.18 + deterministicNoise(index);
+
+        for (const [dr, dc] of DIRECTIONS) {
+          const ownLength = contiguousCount(nextBoard, index, player, dr, dc);
+          const ownOpen = openEnds(nextBoard, index, player, dr, dc);
+          score += ownLength * ownLength * 0.34 + ownOpen * 0.18;
+          if (ownLength >= 5) score += 8.5;
+          if (ownLength === 4 && ownOpen > 0) score += 3.3;
+          if (ownLength === 3 && ownOpen === 2) score += 1.25;
+
+          const opponentBoard = boardWithMove(board, index, opponent);
+          const blockLength = contiguousCount(opponentBoard, index, opponent, dr, dc);
+          const blockOpen = openEnds(opponentBoard, index, opponent, dr, dc);
+          if (blockLength >= 5) score += 7.7;
+          if (blockLength === 4 && blockOpen > 0) score += 3.7;
+          if (blockLength === 3 && blockOpen === 2) score += 1.45;
+        }
+        return score;
+      }
+
+      function softmax(logits) {
+        const finite = logits.filter(Number.isFinite);
+        if (finite.length === 0) return logits.map(() => 0);
+        const maxValue = Math.max(...finite);
+        const exps = logits.map((value) => (Number.isFinite(value) ? Math.exp(value - maxValue) : 0));
+        const total = exps.reduce((sum, value) => sum + value, 0);
+        return exps.map((value) => value / total);
+      }
+
+      function computePrediction(board) {
+        const player = inferPlayer(board);
+        const mask = legalMoveMask(board, player);
+        const rawLogits = board.map((_, index) => candidateScore(board, index, player));
+        const maskedLogits = rawLogits.map((logit, index) => (mask[index] ? logit : Number.NEGATIVE_INFINITY));
+        const probabilities = softmax(maskedLogits);
+        const topK = probabilities
+          .map((probability, index) => ({
+            index,
+            moveId: index + MOVE_ID_OFFSET,
+            probability,
+            logit: maskedLogits[index],
+          }))
+          .filter((item) => Number.isFinite(item.logit))
+          .sort((left, right) => right.probability - left.probability)
+          .slice(0, 8)
+          .map((item, rank) => ({...item, rank: rank + 1}));
+
+        return {
+          player,
+          rawLogits,
+          maskedLogits,
+          probabilities,
+          legalMask: mask,
+          topK,
+          predictedIndex: topK[0]?.index ?? 0,
+          predictedProbability: topK[0]?.probability ?? 0,
+        };
+      }
+
+      function vectorForToken(token, position, dims = 8) {
+        const values = [];
+        for (let i = 0; i < dims; i += 1) {
+          const tokenPart = Math.sin((token + 1) * (i + 2) * 0.43);
+          const posPart = Math.cos((position + 1) * (i + 1) * 0.17);
+          values.push(Math.tanh(tokenPart * 0.72 + posPart * 0.54));
+        }
+        return values;
+      }
+
+      function projectVector(vector, salt) {
+        return vector.map((_, outIndex) => {
+          let sum = 0;
+          for (let inIndex = 0; inIndex < vector.length; inIndex += 1) {
+            sum += vector[inIndex] * Math.sin((inIndex + 1) * (outIndex + 2) * salt);
+          }
+          return Math.tanh(sum / Math.sqrt(vector.length));
+        });
+      }
+
+      function dot(left, right) {
+        return left.reduce((sum, value, index) => sum + value * right[index], 0);
+      }
+
+      function qkvForPosition(board, position) {
+        const token = position === BOARD_CELLS ? SEP_TOKEN_ID : board[position];
+        const hidden = vectorForToken(token, position);
+        return {
+          hidden,
+          q: projectVector(hidden, 0.73),
+          k: projectVector(hidden, 1.17),
+          v: projectVector(hidden, 1.61),
+        };
+      }
+
+      function computeAttention(board, prediction) {
+        const sep = qkvForPosition(board, BOARD_CELLS);
+        const raw = board.map((cell, index) => {
+          const item = qkvForPosition(board, index);
+          const score = dot(sep.q, item.k) / Math.sqrt(8);
+          const probability = prediction.probabilities[index] ?? 0;
+          const stoneBoost = cell === EMPTY ? 0 : 0.22;
+          return score + Math.log1p(probability * 80) * 0.35 + stoneBoost;
+        });
+        const weights = softmax(raw);
+        const top = weights
+          .map((weight, index) => ({index, weight, cell: board[index]}))
+          .sort((left, right) => right.weight - left.weight)
+          .slice(0, 10)
+          .map((item, rank) => ({...item, rank: rank + 1}));
+        return {weights, top};
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function renderBoard() {
+        const stepKey = STEPS[state.step].key;
+        const prediction = state.prediction;
+        const topMap = new Map(prediction.topK.slice(0, 5).map((item) => [item.index, item]));
+        const maxProbability = Math.max(...prediction.probabilities, 0.000001);
+        const attentionMap = new Map(state.attention.top.map((item) => [item.index, item]));
+        nodes.board.replaceChildren();
+
+        for (let index = 0; index < BOARD_CELLS; index += 1) {
+          const value = state.board[index];
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "cell";
+          button.setAttribute("role", "gridcell");
+          button.setAttribute("aria-label", `${coord(index)} ${stoneName(value)} token ${value}`);
+          button.dataset.index = String(index);
+
+          const showHeat = stepKey === "logits" || stepKey === "choice";
+          if (showHeat) {
+            button.style.setProperty("--heat", String(clamp(prediction.probabilities[index] / maxProbability, 0, 1)));
+          }
+          if (!prediction.legalMask[index]) {
+            button.classList.add("masked");
+          }
+          if (stepKey === "tokenize" && (index < 18 || topMap.has(index))) {
+            button.classList.add("token-focus");
+          }
+          if (stepKey === "qkv" && attentionMap.has(index)) {
+            button.classList.add("attention");
+            button.style.setProperty("--attn", String(clamp(attentionMap.get(index).weight * 42, 0.08, 1)));
+          }
+          if ((stepKey === "logits" || stepKey === "choice") && topMap.has(index)) {
+            const rank = document.createElement("span");
+            rank.className = "rank-dot";
+            rank.textContent = String(topMap.get(index).rank);
+            button.append(rank);
+          }
+          if (stepKey === "choice" && index === prediction.predictedIndex) {
+            button.classList.add("predicted");
+            if (value === EMPTY) {
+              const ghost = document.createElement("span");
+              ghost.className = "ghost-stone";
+              button.append(ghost);
+            }
+          }
+          if (value !== EMPTY) {
+            const stone = document.createElement("span");
+            stone.className = `stone ${value === BLACK ? "black" : "white"}`;
+            button.append(stone);
+          }
+          button.addEventListener("click", () => cycleCell(index));
+          nodes.board.append(button);
+        }
+      }
+
+      function railIndexes() {
+        const prediction = state.prediction;
+        const set = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        for (const item of prediction.topK.slice(0, 4)) {
+          for (let index = item.index - 1; index <= item.index + 1; index += 1) {
+            if (index >= 0 && index < BOARD_CELLS) set.add(index);
+          }
+        }
+        set.add(BOARD_CELLS);
+        return [...set].sort((a, b) => a - b);
+      }
+
+      function renderTokenRail() {
+        const stepKey = STEPS[state.step].key;
+        const indexes = railIndexes();
+        const topIndexes = new Set(state.prediction.topK.slice(0, 3).map((item) => item.index));
+        nodes.tokenRail.replaceChildren();
+        let previous = -1;
+        for (const index of indexes) {
+          if (previous !== -1 && index !== previous + 1) {
+            const gap = document.createElement("div");
+            gap.className = "token-chip";
+            gap.innerHTML = "<strong>...</strong><span>省略</span>";
+            nodes.tokenRail.append(gap);
+          }
+          const token = index === BOARD_CELLS ? SEP_TOKEN_ID : state.board[index];
+          const chip = document.createElement("div");
+          chip.className = "token-chip";
+          if (token === BLACK) chip.classList.add("black");
+          if (token === WHITE) chip.classList.add("white");
+          if (token === SEP_TOKEN_ID) chip.classList.add("sep");
+          if (topIndexes.has(index) || index === BOARD_CELLS) chip.classList.add("focus");
+          if (stepKey === "tokenize" && (index < 10 || index === BOARD_CELLS)) chip.classList.add("moving");
+          chip.innerHTML = `<strong>${tokenLabel(token)}</strong><span>pos ${index}</span>`;
+          nodes.tokenRail.append(chip);
+          previous = index;
+        }
+      }
+
+      function renderSteps() {
+        nodes.steps.replaceChildren();
+        STEPS.forEach((step, index) => {
+          const li = document.createElement("li");
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "step-button";
+          if (index === state.step) button.classList.add("active");
+          button.innerHTML = `${index + 1}. ${step.label}<small>${step.short}</small>`;
+          button.addEventListener("click", () => setStep(index, {pause: true}));
+          li.append(button);
+          nodes.steps.append(li);
+        });
+      }
+
+      function vectorBars(vector) {
+        return `
+          <div class="vector-bars" aria-hidden="true">
+            ${vector
+              .map((value) => {
+                const mag = clamp(Math.abs(value), 0.06, 1).toFixed(3);
+                const klass = value < 0 ? "bar neg" : "bar";
+                return `<span class="${klass}" style="--mag: ${mag}"></span>`;
+              })
+              .join("")}
+          </div>
+        `;
+      }
+
+      function vectorBlock(title, caption, vector) {
+        return `
+          <div>
+            <div class="vector-title"><strong>${title}</strong><span>${caption}</span></div>
+            ${vectorBars(vector)}
+          </div>
+        `;
+      }
+
+      function renderBoardStep() {
+        const {black, white} = countStones(state.board);
+        const player = state.prediction.player;
+        return `
+          <div class="viz-grid">
+            <div class="viz-box">
+              <h3>盤面の値</h3>
+              <p>空点は 0、黒石は 1、白石は 2 です。現在は黒 ${black} 個、白 ${white} 個なので、次は ${stoneName(player)} が打つ局面として扱います。</p>
+            </div>
+            <div class="viz-box">
+              <h3>座標と index</h3>
+              <p>左上が index 0、右下が index 224 です。たとえば中央 H8 は index 112 で、出力側では move_id ${112 + MOVE_ID_OFFSET} になります。</p>
+            </div>
+          </div>
+          <div class="formula">board[index] ∈ {0, 1, 2}<br>index = row * 15 + col</div>
+          <div class="note">ポイント: モデルにとって盤面は写真ではなく、固定長の数列です。石の形や連結は、あとで Attention が数列同士の関係として拾います。</div>
+        `;
+      }
+
+      function renderTokenizerStep() {
+        const picked = state.prediction.topK[0];
+        return `
+          <div class="formula">input_ids = board[0..224] + [SEP=228]<br>input_ids.length = 225 + 1 = 226</div>
+          <div class="viz-grid">
+            <div class="viz-box">
+              <h3>SEP の役割</h3>
+              <p>最後の pos 225 に置かれた SEP は、盤面全体の情報を集めるためのまとめ役です。モデルの最後では encoded[:, -1, :]、つまり SEP の位置だけを取り出します。</p>
+            </div>
+            <div class="viz-box">
+              <h3>ラベルとの対応</h3>
+              <p>出力 index は 0 から 224 です。学習データの move_id は ${MOVE_ID_OFFSET} から始まるので、選ばれた ${coord(picked.index)} は move_id ${picked.moveId} になります。</p>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderEmbeddingStep() {
+        const top = state.prediction.topK[0];
+        const sepHidden = qkvForPosition(state.board, BOARD_CELLS).hidden;
+        const moveHidden = qkvForPosition(state.board, top.index).hidden;
+        const centerHidden = qkvForPosition(state.board, Math.floor(BOARD_CELLS / 2)).hidden;
+        return `
+          <div class="formula">hidden[pos] = token_embedding(input_ids[pos]) + position_embedding(pos)<br>hidden shape = [226, ${D_MODEL}]</div>
+          <div class="vector-stack">
+            ${vectorBlock(`候補 ${coord(top.index)}`, `token ${state.board[top.index]} + pos ${top.index}`, moveHidden)}
+            ${vectorBlock("中央 H8", `token ${state.board[Math.floor(BOARD_CELLS / 2)]} + pos 112`, centerHidden)}
+            ${vectorBlock("SEP", `token 228 + pos 225`, sepHidden)}
+          </div>
+          <div class="note">ここでは見やすさのため 128 次元のうちの雰囲気を 8 本のバーに圧縮しています。実際のモデルでは各 token が 128 個の数を持ちます。</div>
+        `;
+      }
+
+      function matrixHtml() {
+        const samplePositions = [
+          BOARD_CELLS,
+          ...state.prediction.topK.slice(0, 5).map((item) => item.index),
+        ];
+        const values = [];
+        for (const qPos of samplePositions) {
+          const q = qkvForPosition(state.board, qPos).q;
+          for (const kPos of samplePositions) {
+            const k = qkvForPosition(state.board, kPos).k;
+            values.push(dot(q, k) / Math.sqrt(8));
+          }
+        }
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        return `
+          <div class="mini-matrix" title="QK^T の小さな例">
+            ${values
+              .map((value) => {
+                const alpha = clamp((value - min) / (max - min + 0.001), 0.12, 0.92).toFixed(3);
+                return `<span class="matrix-cell" style="--alpha: ${alpha}"></span>`;
+              })
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderQkvStep() {
+        const top = state.prediction.topK[0];
+        const sep = qkvForPosition(state.board, BOARD_CELLS);
+        const move = qkvForPosition(state.board, top.index);
+        return `
+          <div class="formula">Q = H Wq, K = H Wk, V = H Wv<br>Attention(Q,K,V) = softmax(QK^T / √${HEAD_DIM}) V</div>
+          <div class="viz-grid">
+            <div class="viz-box">
+              <h3>SEP の Query</h3>
+              ${vectorBars(sep.q)}
+            </div>
+            <div class="viz-box">
+              <h3>${coord(top.index)} の Key</h3>
+              ${vectorBars(move.k)}
+            </div>
+            <div class="viz-box">
+              <h3>${coord(top.index)} の Value</h3>
+              ${vectorBars(move.v)}
+            </div>
+            <div class="viz-box">
+              <h3>QK の相性表</h3>
+              ${matrixHtml()}
+            </div>
+          </div>
+          <div class="viz-box">
+            <h3>SEP が強く見ている場所</h3>
+            <div class="attention-list">
+              ${state.attention.top
+                .slice(0, 6)
+                .map(
+                  (item) => `
+                    <div class="attention-row">
+                      <strong>${coord(item.index)}</strong>
+                      <div class="track"><div class="fill" style="--w: ${clamp(item.weight * 22, 0.03, 1)}"></div></div>
+                      <span class="prob-value">${(item.weight * 100).toFixed(1)}%</span>
+                    </div>
+                  `,
+                )
+                .join("")}
+            </div>
+          </div>
+        `;
+      }
+
+      function renderEncoderStep() {
+        const activeLayer = Math.min(NUM_LAYERS, Math.max(1, Math.floor((performance.now() / 900) % NUM_LAYERS) + 1));
+        return `
+          <div class="formula">TransformerEncoderLayer = MultiHeadAttention + FeedForward + LayerNorm<br>num_layers = ${NUM_LAYERS}, nhead = ${N_HEAD}, dim_feedforward = 256</div>
+          <div class="layer-stack">
+            ${Array.from({length: NUM_LAYERS}, (_, index) => {
+              const layer = index + 1;
+              return `
+                <div class="layer ${layer === activeLayer ? "active" : ""}">
+                  <strong>Layer ${layer}</strong>
+                  <div class="head-row" aria-label="8 heads">
+                    ${Array.from({length: N_HEAD}, () => '<span class="head"></span>').join("")}
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+          <div class="viz-grid">
+            <div class="viz-box">
+              <h3>Multi-head の意味</h3>
+              <p>8 個の head が別々の見方をします。ある head は攻め筋、別の head は守り、また別の head は中央の形を見る、というイメージです。</p>
+            </div>
+            <div class="viz-box">
+              <h3>SEP へ集約</h3>
+              <p>4 層を通るたびに SEP のベクトルは盤面全体の情報を持つようになります。最後の head はこの SEP ベクトルだけを使って点数を出します。</p>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderLogitsStep() {
+        const top = state.prediction.topK.slice(0, 7);
+        const maxProb = Math.max(...top.map((item) => item.probability), 0.000001);
+        return `
+          <div class="formula">pooled = final_norm(encoded[:, -1, :])<br>logits = Linear(pooled), logits shape = [225]</div>
+          <div class="viz-box">
+            <h3>上位 logits</h3>
+            <div class="logit-list">
+              ${top
+                .map(
+                  (item) => `
+                    <div class="logit-row">
+                      <strong>${coord(item.index)}</strong>
+                      <div class="track"><div class="fill" style="--w: ${clamp(item.probability / maxProb, 0.03, 1)}"></div></div>
+                      <span class="logit-value">${item.logit.toFixed(2)}</span>
+                    </div>
+                  `,
+                )
+                .join("")}
+            </div>
+          </div>
+          <div class="note">logit はまだ確率ではなく、生の点数です。盤面上では確率に変換した強さを色で表示しています。</div>
+        `;
+      }
+
+      function renderChoiceStep() {
+        const best = state.prediction.topK[0];
+        const player = state.prediction.player;
+        return `
+          <div class="picked-move">
+            <div class="move-badge">${coord(best.index)}</div>
+            <div>
+              <h3>${stoneName(player)}の次の一手は ${coord(best.index)}</h3>
+              <p>predictedIndex=${best.index}、move_id=${best.moveId}。softmax 後の確率は ${(best.probability * 100).toFixed(1)}% です。</p>
+            </div>
+          </div>
+          <div class="formula">probabilities = softmax(masked_logits)<br>predictedIndex = argmax(probabilities)<br>move_id = predictedIndex + ${MOVE_ID_OFFSET}</div>
+          <div class="viz-box">
+            <h3>候補ランキング</h3>
+            <div class="choice-list">
+              ${state.prediction.topK
+                .slice(0, 6)
+                .map(
+                  (item) => `
+                    <div class="choice-row">
+                      <strong>${item.rank}</strong>
+                      <span>${coord(item.index)}</span>
+                      <div class="track"><div class="fill" style="--w: ${clamp(item.probability / best.probability, 0.03, 1)}"></div></div>
+                      <span class="prob-value">${(item.probability * 100).toFixed(1)}%</span>
+                    </div>
+                  `,
+                )
+                .join("")}
+            </div>
+          </div>
+        `;
+      }
+
+      function renderStage() {
+        const step = STEPS[state.step];
+        nodes.stageTitle.textContent = step.title;
+        nodes.stageCopy.textContent = step.copy;
+        if (step.key === "board") nodes.stageBody.innerHTML = renderBoardStep();
+        if (step.key === "tokenize") nodes.stageBody.innerHTML = renderTokenizerStep();
+        if (step.key === "embedding") nodes.stageBody.innerHTML = renderEmbeddingStep();
+        if (step.key === "qkv") nodes.stageBody.innerHTML = renderQkvStep();
+        if (step.key === "encoder") nodes.stageBody.innerHTML = renderEncoderStep();
+        if (step.key === "logits") nodes.stageBody.innerHTML = renderLogitsStep();
+        if (step.key === "choice") nodes.stageBody.innerHTML = renderChoiceStep();
+      }
+
+      function renderScenarioTabs() {
+        nodes.scenarioTabs.replaceChildren();
+        for (const scenario of SCENARIOS) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = scenario.label;
+          if (scenario.id === state.scenario) button.classList.add("active");
+          button.addEventListener("click", () => {
+            state.scenario = scenario.id;
+            state.board = boardFromScenario(scenario);
+            setStep(0, {pause: true});
+            renderAll();
+          });
+          nodes.scenarioTabs.append(button);
+        }
+      }
+
+      function renderMetrics() {
+        const player = state.prediction.player;
+        const counts = countStones(state.board);
+        nodes.turnMetric.textContent = `${stoneName(player)} (${counts.black}:${counts.white})`;
+      }
+
+      function renderAll() {
+        state.prediction = computePrediction(state.board);
+        state.attention = computeAttention(state.board, state.prediction);
+        renderScenarioTabs();
+        renderSteps();
+        renderMetrics();
+        renderBoard();
+        renderTokenRail();
+        renderStage();
+        updateTransport();
+      }
+
+      function setStep(index, options = {}) {
+        state.step = (index + STEPS.length) % STEPS.length;
+        state.stepStartedAt = performance.now();
+        if (options.pause) state.playing = false;
+        renderAll();
+      }
+
+      function nextStep() {
+        setStep(state.step + 1);
+      }
+
+      function previousStep() {
+        setStep(state.step - 1, {pause: true});
+      }
+
+      function updateTransport() {
+        nodes.playPause.textContent = state.playing ? "一時停止" : "再生";
+        nodes.playPause.classList.toggle("primary", !state.playing);
+      }
+
+      function stepDuration() {
+        return 4600 / state.speed;
+      }
+
+      function cycleCell(index) {
+        state.playing = false;
+        const current = state.board[index];
+        state.board[index] = current === EMPTY ? BLACK : current === BLACK ? WHITE : EMPTY;
+        state.scenario = "custom";
+        setStep(0, {pause: true});
+      }
+
+      function clearBoard() {
+        state.playing = false;
+        state.board = new Array(BOARD_CELLS).fill(EMPTY);
+        state.scenario = "custom";
+        setStep(0, {pause: true});
+      }
+
+      function balanceBoard() {
+        state.playing = false;
+        const counts = countStones(state.board);
+        const diff = counts.black - counts.white;
+        if (diff > 1) {
+          for (let index = BOARD_CELLS - 1; index >= 0 && countStones(state.board).black - countStones(state.board).white > 1; index -= 1) {
+            if (state.board[index] === BLACK) state.board[index] = EMPTY;
+          }
+        } else if (diff < 0) {
+          for (let index = BOARD_CELLS - 1; index >= 0 && countStones(state.board).black < countStones(state.board).white; index -= 1) {
+            if (state.board[index] === WHITE) state.board[index] = EMPTY;
+          }
+        }
+        state.scenario = "custom";
+        setStep(0, {pause: true});
+      }
+
+      nodes.playPause.addEventListener("click", () => {
+        state.playing = !state.playing;
+        state.stepStartedAt = performance.now();
+        updateTransport();
+      });
+      nodes.stepNext.addEventListener("click", () => setStep(state.step + 1, {pause: true}));
+      nodes.stepBack.addEventListener("click", previousStep);
+      nodes.restart.addEventListener("click", () => setStep(0, {pause: true}));
+      nodes.speed.addEventListener("input", () => {
+        state.speed = Number(nodes.speed.value);
+        state.stepStartedAt = performance.now();
+      });
+      nodes.clearBoard.addEventListener("click", clearBoard);
+      nodes.balanceBoard.addEventListener("click", balanceBoard);
+
+      function tick() {
+        const elapsed = performance.now() - state.stepStartedAt;
+        const progress = clamp(elapsed / stepDuration(), 0, 1);
+        nodes.progressBar.style.width = `${progress * 100}%`;
+        if (state.playing && elapsed >= stepDuration()) {
+          nextStep();
+        }
+        if (STEPS[state.step].key === "encoder") {
+          renderStage();
+        }
+        requestAnimationFrame(tick);
+      }
+
+      renderAll();
+      requestAnimationFrame(tick);
+    </script>
+  </body>
+</html>

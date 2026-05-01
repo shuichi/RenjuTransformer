@@ -278,11 +278,11 @@
 
       button.language-toggle {
         display: inline-flex;
-        gap: 8px;
+        gap: 6px;
         align-items: center;
         justify-content: center;
-        min-width: 136px;
-        padding: 9px 12px;
+        min-width: 82px;
+        padding: 9px 10px;
         border: 1px solid var(--line);
         background: #fff;
         color: var(--ink);
@@ -353,9 +353,9 @@
           class="language-toggle"
           aria-label="Englishへ切り替え"
         >
-          <span id="language-current" class="language-current">日本語</span>
+          <span id="language-current" class="language-current">JA</span>
           <span aria-hidden="true">/</span>
-          <span id="language-next" class="language-next">English</span>
+          <span id="language-next" class="language-next">EN</span>
         </button>
       </header>
 
@@ -498,6 +498,7 @@
           introHtml:
             '同じディレクトリにある <code>renju_transformer.onnx</code> と metadata JSON を読み込み、ブラウザ上で次の一手を推論します。',
           languageName: "日本語",
+          languageShortName: "JA",
           languageToggleLabel: ({language}) => `${language}へ切り替え`,
           loadFailed: ({message}) => `読み込み失敗: ${message}`,
           loadModelButton: "モデルを読み込む",
@@ -560,6 +561,7 @@
           introHtml:
             'Loads <code>renju_transformer.onnx</code> and the metadata JSON from this directory, then predicts the next move in your browser.',
           languageName: "English",
+          languageShortName: "EN",
           languageToggleLabel: ({language}) => `Switch to ${language}`,
           loadFailed: ({message}) => `Load failed: ${message}`,
           loadModelButton: "Load model",
@@ -652,8 +654,8 @@
 
       function renderLanguageToggle() {
         const nextLanguage = currentLanguage === "ja" ? "en" : "ja";
-        languageCurrentNode.textContent = I18N[currentLanguage].languageName;
-        languageNextNode.textContent = I18N[nextLanguage].languageName;
+        languageCurrentNode.textContent = I18N[currentLanguage].languageShortName;
+        languageNextNode.textContent = I18N[nextLanguage].languageShortName;
         languageToggleButton.setAttribute(
           "aria-label",
           t("languageToggleLabel", {language: I18N[nextLanguage].languageName}),
